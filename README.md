@@ -31,6 +31,18 @@ Flashy schedules with [FSRS](https://github.com/open-spaced-repetition/ts-fsrs).
 
 ## Review
 
+A deck list in any note, one tap to start:
+
+````markdown
+```flashy
+folder: Study/Biology
+```
+````
+
+Every note with cards in that folder and its subfolders becomes a row with today's count and a learned bar, plus a row for all of them together. The list redraws when the review closes.
+
+Or start from the command palette and the file explorer:
+
 - **Review cards in the current note**, a command.
 - **Review cards in a folder**, a command and a ribbon button; every note in the folder and its subfolders.
 - **Review cards with Flashy** in the context menu of a folder.

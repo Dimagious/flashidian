@@ -14,6 +14,8 @@ const SPRING_C = 0.019;
 type RoundKind = "scheduled" | "practice";
 
 export class ReviewModal extends Modal {
+    /** Called once the reviews of this modal are written, so a deck list can redraw with the new numbers. */
+    onClosed?: () => void;
     private session: Session<DeckCard> = new Session<DeckCard>([]);
     private kind: RoundKind = "scheduled";
     private shuffled = false;
@@ -57,7 +59,7 @@ export class ReviewModal extends Modal {
     }
 
     onClose(): void {
-        void this.progress.save();
+        void this.progress.save().then(() => this.onClosed?.());
         this.md.unload();
         this.contentEl.empty();
         this.nodes.clear();

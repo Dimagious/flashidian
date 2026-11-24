@@ -1,0 +1,5 @@
+# Study
+
+```flashy
+folder: Decks
+```

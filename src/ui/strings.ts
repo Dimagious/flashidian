@@ -39,6 +39,9 @@ const en = {
     setFolderDesc: "Flashy keeps review logs and one note per deck with its numbers here. Your notes with cards stay untouched.",
     setNew: "New cards per day",
     setNewDesc: "How many cards Flashy introduces each day across all decks.",
+    allDecks: "All decks",
+    blockMeta: (learned: number, total: number, fresh: number): string => `${learned} of ${total} learned, ${fresh} new`,
+    blockNoFolder: (path: string): string => (path ? `No folder "${path}".` : "Add a line folder: <path> to this block."),
 };
 
 export type Strings = typeof en;
@@ -82,6 +85,9 @@ const ru: Strings = {
     setFolderDesc: "Здесь Flashy хранит журналы повторений и по заметке на колоду с цифрами. Заметки с карточками не меняются.",
     setNew: "Новых карточек в день",
     setNewDesc: "Сколько новых карточек Flashy добавляет в день по всем колодам.",
+    allDecks: "Все колоды",
+    blockMeta: (learned, total, fresh) => `выучено ${learned} из ${total}, новых ${fresh}`,
+    blockNoFolder: (path) => (path ? `Папки «${path}» нет.` : "Добавь в блок строку folder: <путь>."),
 };
 
 export function strings(): Strings {

@@ -106,3 +106,39 @@ test("fits the phone layout", async ({ obsidian, win }) => {
     await win.waitForTimeout(800);
     await win.screenshot({ path: ".e2e/phone-back.png" });
 });
+
+test("a deck list in a note starts a review with one tap and redraws after it", async ({ obsidian, win }) => {
+    await obsidian.openFile("Study.md", { mode: "preview" });
+    // Obsidian also renders the block in the hidden editor of the tab; the reading view is the one on screen.
+    const rows = win.locator(".markdown-reading-view .flashy-deck-row");
+    await expect(rows).toHaveCount(3);
+    await expect(rows.nth(0).locator(".flashy-deck-name")).toHaveText("All decks");
+    await expect(rows.nth(0).locator(".flashy-deck-today-n")).toHaveText("4");
+    await expect(rows.nth(1).locator(".flashy-deck-name")).toHaveText("Agentic");
+    await expect(rows.nth(2).locator(".flashy-deck-meta")).toHaveText("0 of 1 learned, 1 new");
+
+    await rows.nth(2).click();
+    await expect(win.locator(".flashy-title")).toHaveText("Tools");
+    await win.getByRole("button", { name: "Study 1" }).click();
+    await win.keyboard.press("ArrowRight");
+    await expect(win.locator(".flashy-done")).toBeVisible();
+    await win.getByRole("button", { name: "Close" }).first().click();
+
+    await expect(rows.nth(2).locator(".flashy-deck-meta")).toHaveText("1 of 1 learned, 0 new");
+    await expect(rows.nth(2).locator(".flashy-deck-today-n")).toHaveText("0");
+    await expect(rows.nth(0).locator(".flashy-deck-today-n")).toHaveText("3");
+
+    await obsidian.mobile();
+    await obsidian.openFile("Study.md", { mode: "preview" });
+    await obsidian.settle();
+    await obsidian.checkLayout({ root: ".flashy-decks" });
+    await win.screenshot({ path: ".e2e/phone-decks.png" });
+});
+
+test("the deck list names a missing folder", async ({ obsidian, win }) => {
+    await obsidian.evaluate(async (app: App) => {
+        await app.vault.create("Broken.md", "```flashy\nfolder: Nope\n```\n");
+    });
+    await obsidian.openFile("Broken.md", { mode: "preview" });
+    await expect(win.locator(".markdown-reading-view .flashy-decks-empty")).toHaveText('No folder "Nope".');
+});

@@ -4,6 +4,7 @@ import { DEFAULTS, FlashySettingTab, type FlashySettings } from "./app/settings"
 import { ProgressStore } from "./app/store";
 import { cardIds } from "./core/key";
 import { parseCards } from "./core/parse";
+import { DecksBlock, parseBlock } from "./ui/decks-block";
 import { ReviewModal } from "./ui/review";
 import { strings } from "./ui/strings";
 
@@ -38,6 +39,12 @@ export default class FlashyPlugin extends Plugin {
             new FolderPicker(this.app, t.pickFolder, (f) => void this.review(notesIn(f))).open();
         });
 
+        this.registerMarkdownCodeBlockProcessor("flashy", (source, el, ctx) => {
+            ctx.addChild(
+                new DecksBlock(el, this.app, { reload: () => this.store.load().then(() => undefined), build: (f) => this.build(f), notesIn }, parseBlock(source).folder),
+            );
+        });
+
         this.registerEvent(
             this.app.workspace.on("file-menu", (menu, file) => {
                 if (!(file instanceof TFolder)) return;
@@ -55,6 +62,17 @@ export default class FlashyPlugin extends Plugin {
     }
 
     private async review(files: TFile[]): Promise<void> {
+        await this.store.load();
+        const progress = await this.build(files);
+        if (!progress) {
+            new Notice(strings().noCards);
+            return;
+        }
+        new ReviewModal(this.app, progress).open();
+    }
+
+    /** The cards of these notes bound to the progress already loaded; null when none of them has a card. */
+    private async build(files: TFile[]): Promise<DeckProgress | null> {
         const progressDir = `${this.settings.folder}/`;
         const decks = files.filter((f) => !f.path.startsWith(progressDir));
         const cards: DeckCard[] = [];
@@ -68,12 +86,8 @@ export default class FlashyPlugin extends Plugin {
             });
             if (parsed.length) withCards.push(file);
         }
-        if (!cards.length) {
-            new Notice(strings().noCards);
-            return;
-        }
-        await this.store.load();
-        new ReviewModal(this.app, new DeckProgress(cards, withCards, this.store, () => this.settings.newPerDay)).open();
+        if (!cards.length) return null;
+        return new DeckProgress(cards, withCards, this.store, () => this.settings.newPerDay);
     }
 }
 

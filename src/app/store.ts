@@ -41,8 +41,9 @@ export class ProgressStore {
         const prefix = `${this.dir()}/log-`;
         const files = this.app.vault.getFiles().filter((f) => f.path.startsWith(prefix) && f.extension === "md");
         const logs = await Promise.all(files.map(async (f) => parseLog(await this.app.vault.cachedRead(f))));
-        this.entries = merge([...logs, this.pending]);
-        return replay(this.entries);
+        // What this session already knows stays: right after a write the metadata cache can still serve the old file.
+        this.entries = merge([...logs, this.entries]);
+        return replay(merge([this.entries, this.pending]));
     }
 
     /** The state after the reviews recorded so far, written or not. */

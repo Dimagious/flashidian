@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- A `flashy` code block with `folder: <path>` draws a deck list in any note: one row per deck with today's cards and a learned bar, a row for all decks, one tap to start the review. It redraws when the review closes.
+- Progress written a moment before a reload is no longer missed when the metadata cache still holds the old log.
+
 ## [0.2.0] - 2026-11-24
 
 - FSRS scheduling: swipe right and a card comes back in days, then weeks; swipe left and it comes back tomorrow.
