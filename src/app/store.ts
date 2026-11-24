@@ -1,0 +1,116 @@
+import { type App, normalizePath, type TFile } from "obsidian";
+import { appendLog, type Entry, merge, newLog, parseLog } from "../core/log";
+import { type CardState, replay, type Stats } from "../core/schedule";
+
+const DEVICE_KEY = "flashy-device";
+/** Reviews are written in batches: at the end of a round, on close, and this long after the last grade. */
+const FLUSH_DELAY_MS = 15_000;
+
+/**
+ * Review progress in the vault. Each device appends to its own `<folder>/log-<device>.md` and reads everyone's.
+ * The device id lives in Obsidian's per-vault local storage, which no sync service copies.
+ */
+export class ProgressStore {
+    private readonly device: string;
+    private entries: Entry[] = [];
+    private pending: Entry[] = [];
+    private timer: number | null = null;
+
+    constructor(
+        private readonly app: App,
+        private readonly folder: () => string,
+    ) {
+        const saved: unknown = app.loadLocalStorage(DEVICE_KEY);
+        if (typeof saved === "string" && /^[a-z0-9]{4,}$/.test(saved)) this.device = saved;
+        else {
+            this.device = Math.random().toString(36).slice(2, 10);
+            app.saveLocalStorage(DEVICE_KEY, this.device);
+        }
+    }
+
+    private dir(): string {
+        return normalizePath(this.folder() || "Flashy");
+    }
+
+    private logPath(): string {
+        return normalizePath(`${this.dir()}/log-${this.device}.md`);
+    }
+
+    /** Reads every device's log and returns the replayed state of every card key. */
+    async load(): Promise<Map<string, CardState>> {
+        const prefix = `${this.dir()}/log-`;
+        const files = this.app.vault.getFiles().filter((f) => f.path.startsWith(prefix) && f.extension === "md");
+        const logs = await Promise.all(files.map(async (f) => parseLog(await this.app.vault.cachedRead(f))));
+        this.entries = merge([...logs, this.pending]);
+        return replay(this.entries);
+    }
+
+    /** The state after the reviews recorded so far, written or not. */
+    current(): Map<string, CardState> {
+        return replay(merge([this.entries, this.pending]));
+    }
+
+    record(e: Entry): void {
+        this.pending.push(e);
+        if (this.timer !== null) window.clearTimeout(this.timer);
+        this.timer = window.setTimeout(() => void this.flush(), FLUSH_DELAY_MS);
+    }
+
+    /** Takes back the last unwritten review of a card. Returns false when it was already written to the log. */
+    unrecord(key: string): boolean {
+        const last = this.pending[this.pending.length - 1];
+        if (!last || last.key !== key) return false;
+        this.pending.pop();
+        return true;
+    }
+
+    async flush(): Promise<void> {
+        if (this.timer !== null) {
+            window.clearTimeout(this.timer);
+            this.timer = null;
+        }
+        if (!this.pending.length) return;
+        const batch = this.pending;
+        this.pending = [];
+        await this.ensureFolder();
+        const path = this.logPath();
+        const file = this.app.vault.getFileByPath(path);
+        if (file) await this.app.vault.process(file, (text) => appendLog(text, this.device, batch));
+        else await this.app.vault.create(path, newLog(this.device, batch));
+        this.entries = merge([this.entries, batch]);
+    }
+
+    /**
+     * One note per deck with its numbers as properties, for Bases, Dataview or Dashy. Derived data: a conflict in it
+     * loses nothing, the next review writes it again from the logs.
+     */
+    async writeSummary(deck: TFile, s: Stats): Promise<void> {
+        await this.ensureFolder();
+        const path = normalizePath(`${this.dir()}/${deck.basename}.md`);
+        let file = this.app.vault.getFileByPath(path);
+        if (!file) {
+            file = await this.app.vault.create(
+                path,
+                `%% Flashy progress of ${this.app.fileManager.generateMarkdownLink(deck, path)}. Flashy rewrites these properties after every review. %%\n`,
+            );
+        }
+        await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
+            fm["flashy-deck"] = this.app.fileManager.generateMarkdownLink(deck, path);
+            fm["flashy-total"] = s.total;
+            fm["flashy-new"] = s.fresh;
+            fm["flashy-due"] = s.due;
+            fm["flashy-learned"] = s.learned;
+            fm["flashy-learning"] = s.learning;
+        });
+    }
+
+    private async ensureFolder(): Promise<void> {
+        const dir = this.dir();
+        if (!this.app.vault.getFolderByPath(dir)) await this.app.vault.createFolder(dir);
+    }
+
+    dispose(): void {
+        if (this.timer !== null) window.clearTimeout(this.timer);
+        void this.flush();
+    }
+}

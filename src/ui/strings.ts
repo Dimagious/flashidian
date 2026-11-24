@@ -25,6 +25,20 @@ const en = {
     cmdFolder: "Review cards in a folder",
     pickFolder: "Folder with flashcards",
     menuFolder: "Review cards with Flashy",
+    today: "Today",
+    fresh: "New",
+    learned: "Learned",
+    total: (n: number): string => `${n} cards`,
+    study: (n: number): string => `Study ${n}`,
+    allDone: "Done for today",
+    nextOn: (d: string): string => `Next cards on ${d}`,
+    practiceAll: (n: number): string => `Go through all ${n}`,
+    toDeck: "Back to the deck",
+    practiceNote: "Practice round: it does not change the schedule.",
+    setFolder: "Progress folder",
+    setFolderDesc: "Flashy keeps review logs and one note per deck with its numbers here. Your notes with cards stay untouched.",
+    setNew: "New cards per day",
+    setNewDesc: "How many cards Flashy introduces each day across all decks.",
 };
 
 export type Strings = typeof en;
@@ -54,6 +68,20 @@ const ru: Strings = {
     cmdFolder: "Повторить карточки из папки",
     pickFolder: "Папка с карточками",
     menuFolder: "Повторить карточки во Flashy",
+    today: "На сегодня",
+    fresh: "Новые",
+    learned: "Выучено",
+    total: (n) => `Карточек: ${n}`,
+    study: (n) => `Учить ${n}`,
+    allDone: "На сегодня всё",
+    nextOn: (d) => `Следующие карточки ${d}`,
+    practiceAll: (n) => `Пройти все ${n}`,
+    toDeck: "К колоде",
+    practiceNote: "Тренировочный круг: расписание не меняется.",
+    setFolder: "Папка прогресса",
+    setFolderDesc: "Здесь Flashy хранит журналы повторений и по заметке на колоду с цифрами. Заметки с карточками не меняются.",
+    setNew: "Новых карточек в день",
+    setNewDesc: "Сколько новых карточек Flashy добавляет в день по всем колодам.",
 };
 
 export function strings(): Strings {

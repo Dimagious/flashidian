@@ -1,11 +1,21 @@
 import { type App, FuzzySuggestModal, Notice, Plugin, TFile, TFolder, type TAbstractFile } from "obsidian";
+import { type DeckCard, DeckProgress } from "./app/progress";
+import { DEFAULTS, FlashySettingTab, type FlashySettings } from "./app/settings";
+import { ProgressStore } from "./app/store";
+import { cardIds } from "./core/key";
 import { parseCards } from "./core/parse";
-import { type DeckCard, ReviewModal } from "./ui/review";
+import { ReviewModal } from "./ui/review";
 import { strings } from "./ui/strings";
 
 export default class FlashyPlugin extends Plugin {
-    onload(): void {
+    settings: FlashySettings = { ...DEFAULTS };
+    private store!: ProgressStore;
+
+    async onload(): Promise<void> {
         const t = strings();
+        this.settings = { ...DEFAULTS, ...((await this.loadData()) as Partial<FlashySettings> | null) };
+        this.store = new ProgressStore(this.app, () => this.settings.folder);
+        this.addSettingTab(new FlashySettingTab(this.app, this));
 
         this.addCommand({
             id: "review-note",
@@ -36,17 +46,34 @@ export default class FlashyPlugin extends Plugin {
         );
     }
 
+    onunload(): void {
+        this.store.dispose();
+    }
+
+    async saveSettings(): Promise<void> {
+        await this.saveData(this.settings);
+    }
+
     private async review(files: TFile[]): Promise<void> {
+        const progressDir = `${this.settings.folder}/`;
+        const decks = files.filter((f) => !f.path.startsWith(progressDir));
         const cards: DeckCard[] = [];
-        for (const file of files) {
-            const text = await this.app.vault.cachedRead(file);
-            for (const card of parseCards(text)) cards.push({ card, path: file.path, deck: file.basename });
+        const withCards: TFile[] = [];
+        for (const file of decks) {
+            const parsed = parseCards(await this.app.vault.cachedRead(file));
+            const ids = cardIds(parsed);
+            parsed.forEach((card, i) => {
+                const id = ids[i];
+                if (id) cards.push({ card, path: file.path, deck: file.basename, id });
+            });
+            if (parsed.length) withCards.push(file);
         }
         if (!cards.length) {
             new Notice(strings().noCards);
             return;
         }
-        new ReviewModal(this.app, cards).open();
+        await this.store.load();
+        new ReviewModal(this.app, new DeckProgress(cards, withCards, this.store, () => this.settings.newPerDay)).open();
     }
 }
 

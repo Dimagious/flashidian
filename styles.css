@@ -506,3 +506,78 @@
 .is-phone .flashy-btn:not(.is-small) .svg-icon {
     display: none;
 }
+
+/* ---------- deck screen ---------- */
+
+.flashy:not(.is-round) .flashy-round-only {
+    display: none;
+}
+
+.flashy-home {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--size-4-6);
+    margin: auto;
+    max-width: 460px;
+    text-align: center;
+}
+
+.flashy-home-total {
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    font-weight: var(--font-semibold);
+}
+
+.flashy-home-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--size-4-2);
+    width: 100%;
+}
+
+.flashy-home-cell {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-4-1);
+    padding: var(--size-4-4) var(--size-4-2);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-l);
+    background: var(--background-primary);
+}
+
+.theme-dark .flashy-home-cell {
+    background: var(--background-secondary);
+}
+
+.flashy-home-n {
+    font-size: 34px;
+    font-weight: var(--font-bold);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+}
+
+.flashy-home-cell.is-today .flashy-home-n {
+    color: var(--interactive-accent);
+}
+
+.flashy-home-cell.is-learned .flashy-home-n {
+    color: var(--flashy-keep-color);
+}
+
+.flashy-home-label {
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+}
+
+.flashy-home-note {
+    color: var(--text-faint);
+    font-size: var(--font-ui-small);
+}
+
+.flashy-acts button:disabled {
+    opacity: 0.5;
+}

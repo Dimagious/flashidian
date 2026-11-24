@@ -11,8 +11,9 @@ Name vs id: `name` must not resemble "Obsidian" (catalog review). So `id` and re
 ## Layout
 
 ```
-src/core   pure: parse (cards from markdown), session (one round, grades, undo, shuffle). Carries the 90 percent coverage gate.
-src/ui     review modal (stack, flip, drag, spring, end-of-round ring), strings (en, ru)
+src/core   pure: parse (cards from markdown), session (one round), key (card identity), log (review log format), schedule (FSRS replay, stats, today's queue). Carries the 90 percent coverage gate.
+src/app    store (vault I/O: device log, summaries), progress (cards of one review bound to the store), settings (declarative tab)
+src/ui     review modal (deck screen, stack, flip, drag, spring, end-of-round ring), strings (en, ru)
 src/main.ts  commands: review the current note, review a folder (picker, ribbon, folder context menu)
 e2e/       Playwright in real Obsidian: the full review, empty note, phone layout check
 ```
@@ -40,6 +41,14 @@ npx opdk release patch --dry-run                                 # cut a release
 - Timers and frames through `activeWindow`, DOM through `activeDocument` (popout windows).
 - No em dashes anywhere (code, copy, docs). Commits are authored by the developer only, no Claude trailers.
 
+## Progress storage (ADR, 2026-11-24)
+
+Decided after an architect and a marketer reviewed the options: notes with cards are never written to (SR's issue #162: users hate scheduling data in notes); `data.json` and hidden folders are out because Obsidian Sync does not sync them by default. So: a visible folder (`Flashy/`, configurable), one append-only `log-<device>.md` per device (single writer, no sync conflicts, Decks does the same), state replayed with ts-fsrs (no fuzz, no short-term steps, so every device computes the same dates), and `Flashy/<deck>.md` with derived numbers as properties (safe to lose in a conflict). Device id in `app.saveLocalStorage`, which no sync copies.
+
+- Card key: cyrb53 of the normalized front, `-2`, `-3` for repeats in one note; the path is not part of it. A card without history takes over an orphaned key with the same answer hash, and keeps logging under that old key (`CardState.key`).
+- Reviews are batched: flushed at the end of a round, on close and 15 s after the last grade. Undo takes back an unwritten review only.
+- Practice rounds (the cards sent left, again) write nothing.
+
 ## Not built yet
 
-FSRS scheduling (`ts-fsrs`, right = Good, left = Again), review state stored in the vault, stats, settings. Testing on a phone goes through BRAT (`Dimagious/flashidian`), so every fix the phone should see needs `opdk release patch`.
+Replay cache and log snapshots (logs are replayed in full on every open; fine for thousands of reviews), cards from tables, lists and headings, paste import, multiple choice. Testing on a phone goes through BRAT (`Dimagious/flashidian`), so every fix the phone should see needs `opdk release patch`.

@@ -1,14 +1,7 @@
-import { type App, Component, MarkdownRenderer, Modal, setIcon } from "obsidian";
-import type { Card } from "../core/parse";
+import { type App, Component, getLanguage, MarkdownRenderer, Modal, setIcon } from "obsidian";
+import type { DeckCard, DeckProgress } from "../app/progress";
 import { type Grade, Session, shuffle } from "../core/session";
 import { type Strings, strings } from "./strings";
-
-/** A card plus the note it came from, so its markdown renders with the right links and the deck can be named. */
-export interface DeckCard {
-    card: Card;
-    path: string;
-    deck: string;
-}
 
 const STACK = 3;
 /** Share of the card width a drag must pass to count as a grade. */
@@ -17,9 +10,12 @@ const THRESHOLD = 0.32;
 const SPRING_K = 0.00026;
 const SPRING_C = 0.019;
 
+/** A scheduled round writes every grade to the log; a practice round (the cards sent left, again) writes nothing. */
+type RoundKind = "scheduled" | "practice";
+
 export class ReviewModal extends Modal {
-    private readonly cards: DeckCard[];
-    private session: Session<DeckCard>;
+    private session: Session<DeckCard> = new Session<DeckCard>([]);
+    private kind: RoundKind = "scheduled";
     private shuffled = false;
     private busy = false;
     private readonly t: Strings = strings();
@@ -27,6 +23,7 @@ export class ReviewModal extends Modal {
     private readonly nodes = new Map<number, HTMLElement>();
     private readonly reduceMotion = activeWindow.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+    private root!: HTMLElement;
     private stage!: HTMLElement;
     private countEl!: HTMLElement;
     private barEl!: HTMLElement;
@@ -36,10 +33,11 @@ export class ReviewModal extends Modal {
     private actionBtns: HTMLButtonElement[] = [];
     private legend!: HTMLElement;
 
-    constructor(app: App, cards: DeckCard[]) {
+    constructor(
+        app: App,
+        private readonly progress: DeckProgress,
+    ) {
         super(app);
-        this.cards = cards;
-        this.session = new Session(cards);
     }
 
     onOpen(): void {
@@ -48,23 +46,25 @@ export class ReviewModal extends Modal {
         // Obsidian mobile opens the sidebars on a horizontal swipe; this attribute tells it to leave the swipe to us.
         this.modalEl.setAttr("data-ignore-swipe", "true");
         this.build();
-        this.scope.register([], "ArrowRight", () => (this.fling(1), false));
-        this.scope.register([], "ArrowLeft", () => (this.fling(-1), false));
-        this.scope.register([], " ", () => (this.flip(), false));
-        this.scope.register([], "ArrowUp", () => (this.flip(), false));
-        this.scope.register([], "ArrowDown", () => (this.flip(), false));
-        this.scope.register([], "Backspace", () => (this.undo(), false));
-        this.start(this.cards);
+        const inRound = (): boolean => this.root.hasClass("is-round");
+        this.scope.register([], "ArrowRight", () => (inRound() && this.fling(1), false));
+        this.scope.register([], "ArrowLeft", () => (inRound() && this.fling(-1), false));
+        this.scope.register([], " ", () => (inRound() && this.flip(), false));
+        this.scope.register([], "ArrowUp", () => (inRound() && this.flip(), false));
+        this.scope.register([], "ArrowDown", () => (inRound() && this.flip(), false));
+        this.scope.register([], "Backspace", () => (inRound() && this.undo(), false));
+        this.showDeck();
     }
 
     onClose(): void {
+        void this.progress.save();
         this.md.unload();
         this.contentEl.empty();
         this.nodes.clear();
     }
 
     private build(): void {
-        const root = this.contentEl.createDiv({ cls: "flashy" });
+        const root = (this.root = this.contentEl.createDiv({ cls: "flashy" }));
 
         // Our own close button: Obsidian's sits at the very top, under the status bar and the notch on an iPhone.
         const top = root.createDiv({ cls: "flashy-top" });
@@ -73,7 +73,7 @@ export class ReviewModal extends Modal {
         close.addEventListener("click", () => this.close());
         top.createDiv({ cls: "flashy-title", text: this.title() });
 
-        const hud = root.createDiv({ cls: "flashy-hud" });
+        const hud = root.createDiv({ cls: "flashy-hud flashy-round-only" });
         this.repeatEl = hud.createDiv({ cls: "flashy-pill is-repeat", attr: { "aria-label": this.t.repeat } });
         setIcon(this.repeatEl.createSpan(), "chevron-left");
         this.repeatEl.createSpan({ cls: "flashy-n", text: "0" });
@@ -85,12 +85,12 @@ export class ReviewModal extends Modal {
         setIcon(this.keepEl.createSpan(), "chevron-right");
 
         this.stage = root.createDiv({ cls: "flashy-stage" });
-        this.legend = this.stage.createDiv({ cls: "flashy-legend" });
+        this.legend = this.stage.createDiv({ cls: "flashy-legend flashy-round-only" });
         this.legend.createSpan({ text: this.t.swipeLeft });
         this.legend.createSpan({ text: this.t.tapCard });
         this.legend.createSpan({ text: this.t.swipeRight });
 
-        const bar = root.createDiv({ cls: "flashy-controls" });
+        const bar = root.createDiv({ cls: "flashy-controls flashy-round-only" });
         const btn = (cls: string, icon: string, label: string, text: string | null, onClick: () => void, iconLast = false): HTMLButtonElement => {
             const b = bar.createEl("button", { cls: `flashy-btn ${cls}`, attr: { "aria-label": label } });
             const i = createSpan();
@@ -108,21 +108,58 @@ export class ReviewModal extends Modal {
         const shuf = btn("is-small", "shuffle", this.t.shuffle, null, () => {
             this.shuffled = !this.shuffled;
             shuf.toggleClass("is-active", this.shuffled);
-            this.start(this.cards);
+            this.start(this.session.items.slice(), this.kind);
         });
         this.actionBtns = [no, flip, yes];
     }
 
     /** The deck name when every card comes from one note, otherwise the number of notes. */
     private title(): string {
-        const decks = new Set(this.cards.map((c) => c.deck));
+        const decks = new Set(this.progress.items.map((c) => c.deck));
         const [only] = decks;
         return decks.size === 1 && only ? only : this.t.decks(decks.size);
     }
 
-    private start(cards: DeckCard[]): void {
-        for (const el of Array.from(this.stage.querySelectorAll(".flashy-card, .flashy-done"))) el.remove();
+    private clearStage(): void {
+        for (const el of Array.from(this.stage.querySelectorAll(".flashy-card, .flashy-done, .flashy-home"))) el.remove();
         this.nodes.clear();
+    }
+
+    // ---------- deck screen ----------
+
+    private showDeck(): void {
+        this.clearStage();
+        this.root.removeClass("is-round");
+        const s = this.progress.stats();
+        const today = this.progress.today();
+        const home = this.stage.createDiv({ cls: "flashy-home" });
+        home.createDiv({ cls: "flashy-home-total", text: this.t.total(s.total) });
+        const grid = home.createDiv({ cls: "flashy-home-grid" });
+        const cell = (cls: string, n: number, label: string): void => {
+            const c = grid.createDiv({ cls: `flashy-home-cell ${cls}` });
+            c.createDiv({ cls: "flashy-home-n", text: String(n) });
+            c.createDiv({ cls: "flashy-home-label", text: label });
+        };
+        cell("is-today", today.length, this.t.today);
+        cell("is-new", s.fresh, this.t.fresh);
+        cell("is-learned", s.learned, this.t.learned);
+
+        const acts = home.createDiv({ cls: "flashy-acts" });
+        const study = acts.createEl("button", { cls: "mod-cta", text: today.length ? this.t.study(today.length) : this.t.allDone });
+        study.disabled = !today.length;
+        study.addEventListener("click", () => this.start(today, "scheduled"));
+        acts.createEl("button", { text: this.t.practiceAll(s.total) }).addEventListener("click", () => this.start(this.progress.items, "scheduled"));
+        const next = this.progress.nextDue();
+        if (!today.length && next) home.createDiv({ cls: "flashy-home-note", text: this.t.nextOn(next.toLocaleDateString(getLanguage(), { day: "numeric", month: "long" })) });
+    }
+
+    // ---------- round ----------
+
+    private start(cards: readonly DeckCard[], kind: RoundKind): void {
+        this.clearStage();
+        this.kind = kind;
+        this.root.addClass("is-round");
+        this.root.toggleClass("is-practice", kind === "practice");
         this.session = new Session(this.shuffled ? shuffle(cards) : cards.slice());
         this.busy = false;
         this.layout();
@@ -256,8 +293,10 @@ export class ReviewModal extends Modal {
     }
 
     private commit(g: Grade): void {
+        const item = this.session.peek();
         this.top()?.remove();
         this.nodes.delete(this.session.index);
+        if (item && this.kind === "scheduled") this.progress.record(item, g);
         this.session.grade(g);
         this.bump(g === "keep" ? this.keepEl : this.repeatEl);
         this.busy = false;
@@ -270,6 +309,8 @@ export class ReviewModal extends Modal {
         if (!this.session.canUndo || this.busy) return;
         this.stage.querySelector(".flashy-done")?.remove();
         const g = this.session.undo();
+        const item = this.session.peek();
+        if (item && this.kind === "scheduled") this.progress.unrecord(item);
         this.layout();
         this.hud();
         const el = this.top();
@@ -348,6 +389,7 @@ export class ReviewModal extends Modal {
     }
 
     private finish(): void {
+        if (this.kind === "scheduled") void this.progress.save();
         const s = this.session;
         const n = s.total, keep = s.count("keep"), again = s.graded("repeat");
         const done = this.stage.createDiv({ cls: "flashy-done" });
@@ -361,10 +403,13 @@ export class ReviewModal extends Modal {
         done.createEl("p", { text: again.length ? this.t.summary(keep, again.length) : this.t.summaryAll(n) });
         const acts = done.createDiv({ cls: "flashy-acts" });
         if (again.length) {
-            acts.createEl("button", { cls: "mod-cta", text: this.t.repeatN(again.length) }).addEventListener("click", () => this.start(again));
+            acts.createEl("button", { cls: "mod-cta", text: this.t.repeatN(again.length) }).addEventListener("click", () => this.start(again, "practice"));
+            done.createDiv({ cls: "flashy-home-note", text: this.t.practiceNote });
         }
-        acts.createEl("button", { cls: again.length ? "" : "mod-cta", text: this.t.restart }).addEventListener("click", () => this.start(this.cards));
-        acts.createEl("button", { text: this.t.close }).addEventListener("click", () => this.close());
+        acts.createEl("button", { cls: again.length ? "" : "mod-cta", text: this.t.toDeck }).addEventListener("click", () => {
+            this.progress.refresh();
+            this.showDeck();
+        });
         activeWindow.requestAnimationFrame(() =>
             activeWindow.requestAnimationFrame(() => val.setCssProps({ "--flashy-share": String(n ? keep / n : 0) })),
         );
