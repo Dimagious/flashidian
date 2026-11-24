@@ -854,3 +854,17 @@
         animation: none;
     }
 }
+
+/* Obsidian mobile centers button content and paints its own background on buttons; options read left to right and keep their state colors. */
+.flashy-quiz .flashy-quiz-option {
+    justify-content: flex-start;
+    background: var(--background-primary);
+}
+
+.flashy-quiz .flashy-quiz-option.is-right {
+    background: rgba(var(--color-green-rgb), 0.14);
+}
+
+.flashy-quiz .flashy-quiz-option.is-wrong {
+    background: rgba(var(--color-red-rgb), 0.12);
+}
