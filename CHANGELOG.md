@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-24
+
 - First published release. The 0.1.0 tag was made by hand and never published; 0.1.1 has the same code.
 
 ## [0.1.0]
