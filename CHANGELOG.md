@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-24
+
 - Quiz: up to 20 multiple choice questions from the deck screen. The question is the first plain paragraph of an answer with the term hidden, the options are four terms from the same review. Right picks move on, wrong ones show the answer; retry the missed at the end. Does not change the schedule.
 
 ## [0.4.0] - 2026-11-24
