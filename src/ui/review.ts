@@ -66,6 +66,13 @@ export class ReviewModal extends Modal {
     private build(): void {
         const root = this.contentEl.createDiv({ cls: "flashy" });
 
+        // Our own close button: Obsidian's sits at the very top, under the status bar and the notch on an iPhone.
+        const top = root.createDiv({ cls: "flashy-top" });
+        const close = top.createEl("button", { cls: "flashy-close clickable-icon", attr: { "aria-label": this.t.close } });
+        setIcon(close, "x");
+        close.addEventListener("click", () => this.close());
+        top.createDiv({ cls: "flashy-title", text: this.title() });
+
         const hud = root.createDiv({ cls: "flashy-hud" });
         this.repeatEl = hud.createDiv({ cls: "flashy-pill is-repeat", attr: { "aria-label": this.t.repeat } });
         setIcon(this.repeatEl.createSpan(), "chevron-left");
@@ -104,6 +111,13 @@ export class ReviewModal extends Modal {
             this.start(this.cards);
         });
         this.actionBtns = [no, flip, yes];
+    }
+
+    /** The deck name when every card comes from one note, otherwise the number of notes. */
+    private title(): string {
+        const decks = new Set(this.cards.map((c) => c.deck));
+        const [only] = decks;
+        return decks.size === 1 && only ? only : this.t.decks(decks.size);
     }
 
     private start(cards: DeckCard[]): void {

@@ -50,6 +50,11 @@ test("reviews the cards of a note: flip, swipe right, swipe left, undo, finish",
     await win.getByRole("button", { name: "Repeat 1" }).click();
     await expect(win.locator(".flashy-count")).toHaveText("1 / 1");
     await expect(win.locator(`${card} .flashy-term`)).toHaveText("stop_reason");
+
+    // The close button in the top bar ends the review.
+    await expect(win.locator(".flashy-title")).toHaveText("Agentic");
+    await win.getByRole("button", { name: "Close" }).first().click();
+    await expect(win.locator(".flashy-modal")).toHaveCount(0);
 });
 
 test("says so when a note has no cards", async ({ obsidian, win }) => {
