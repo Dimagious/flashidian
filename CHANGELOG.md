@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-24
+
 - Quiz on a phone: options read from the left and keep their green and red, which Obsidian's mobile button style covered.
 
 ## [0.5.0] - 2026-11-24
