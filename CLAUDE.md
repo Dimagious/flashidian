@@ -32,7 +32,7 @@ npx opdk release patch --dry-run                                 # cut a release
 
 - Card motion goes through CSS variables (`--flashy-x`, `--flashy-y`, `--flashy-r`, `--flashy-keep`, `--flashy-repeat`) set with `setCssProps`; the scanner rejects `el.style.*` assignments.
 - No `backdrop-filter` and no pseudo-elements on the card faces: both break `backface-visibility` in WebKit (iOS).
-- The modal carries `data-ignore-swipe`, otherwise Obsidian mobile opens a sidebar on a horizontal swipe. Whether it also stops the pull-down gesture is not verified on a device yet.
+- The modal carries `data-ignore-swipe`, otherwise Obsidian mobile opens a sidebar on a horizontal swipe. Checked on an iPhone with 0.1.1: swipes no longer open the sidebars.
 - On the back, a mostly vertical first move releases the pointer so a long answer scrolls (`touch-action: pan-y` on a flipped card).
 - Phone fonts are larger: the three labelled buttons hide their icons under `.is-phone`, or "Answer" is clipped at 390 px.
 - Obsidian's close button sits under the iPhone status bar in a full-screen modal and the desktop emulation does not show it. Flashy hides it (`.modal-close-button` on desktop, `.modal-header-button` on mobile) and draws its own in `.flashy-top` with the safe-area inset.
@@ -42,4 +42,4 @@ npx opdk release patch --dry-run                                 # cut a release
 
 ## Not built yet
 
-FSRS scheduling (`ts-fsrs`, right = Good, left = Again), review state stored in the vault, stats, settings, release.
+FSRS scheduling (`ts-fsrs`, right = Good, left = Again), review state stored in the vault, stats, settings. Testing on a phone goes through BRAT (`Dimagious/flashidian`), so every fix the phone should see needs `opdk release patch`.
