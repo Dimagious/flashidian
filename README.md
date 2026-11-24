@@ -16,6 +16,18 @@ A control flow where Claude repeats input, action and observation until the task
 
 The front is the paragraph above a line with only `?` (or `??`), the back is the paragraph below it. Frontmatter, fenced code and the Spaced Repetition plugin's scheduling comments are skipped.
 
+## Cards from notes you already have
+
+Add `flashy: true` to the properties of a note and Flashy finds the cards in it, no special syntax:
+
+- **Headings**: every `## Term` is a card, the text under it (callouts, tables and code included) is the answer. A glossary becomes a deck as it is.
+- **Tables**: every row of a table with two or more columns; the first cell is the front.
+- **Lists**: top-level items like `term - definition`, `term: definition` or `**term** definition`.
+
+A note uses one shape: headings if it has any, otherwise tables, otherwise lists. To pick one, set `flashy: headings`, `flashy: table` or `flashy: list`. A card that two notes share (a glossary and a deck made from it) is reviewed once.
+
+**Paste a deck**: the command *Create a deck from pasted text* takes terms and definitions copied from Quizlet (Export), a spreadsheet, a CSV file or a list, and writes a deck note next to the open note.
+
 ## Your notes stay as you wrote them
 
 Flashy never writes into the notes with your cards. Progress lives in plain Markdown files in a `Flashy/` folder of your vault (the folder can be changed in settings), so it syncs with Obsidian Sync, iCloud or anything else that syncs notes, and survives reinstalling the plugin:
@@ -47,7 +59,7 @@ Or start from the command palette and the file explorer:
 - **Review cards in a folder**, a command and a ribbon button; every note in the folder and its subfolders.
 - **Review cards with Flashy** in the context menu of a folder.
 
-During a review: tap or Space to flip, swipe or the arrow keys to grade, Backspace to undo the last card. At the end of a round Flashy offers the cards you sent left as a practice round, which does not change the schedule.
+During a review: tap or Space to flip, swipe or the arrow keys to grade, Backspace to undo the last card (also after it was written to the log). At the end of a round Flashy offers the cards you sent left as a practice round, which does not change the schedule.
 
 ## License
 

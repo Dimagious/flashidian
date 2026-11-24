@@ -17,7 +17,7 @@ export interface CardState {
     /** Day of the first review, local time, YYYY-MM-DD: counts new cards per day. */
     firstDay: string;
     /** The last rating: a card sent left is not learned, even while it waits for tomorrow. */
-    last: Entry["rating"];
+    last: Exclude<Entry["rating"], 0>;
 }
 
 export function localDay(d: Date): string {
@@ -27,8 +27,10 @@ export function localDay(d: Date): string {
 
 /** Replays merged log entries into the current state of every card key ever reviewed. */
 export function replay(entries: readonly Entry[]): Map<string, CardState> {
+    const cancelled = new Set(entries.filter((e) => e.rating === 0).map((e) => `${e.key} ${e.back}`));
     const states = new Map<string, CardState>();
     for (const e of entries) {
+        if (e.rating === 0 || cancelled.has(`${e.key} ${e.at.getTime()}`)) continue;
         const prev = states.get(e.key);
         const card: FsrsCard = prev ? prev.fsrs : createEmptyCard(e.at);
         const next = scheduler.next(card, e.at, e.rating).card;

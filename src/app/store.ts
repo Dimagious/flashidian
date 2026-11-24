@@ -57,12 +57,20 @@ export class ProgressStore {
         this.timer = window.setTimeout(() => void this.flush(), FLUSH_DELAY_MS);
     }
 
-    /** Takes back the last unwritten review of a card. Returns false when it was already written to the log. */
-    unrecord(key: string): boolean {
+    /**
+     * Takes back the last review of a card: drops it if it is not written yet, otherwise appends a cancelling entry
+     * (rating 0) that points at its time.
+     */
+    unrecord(key: string): void {
         const last = this.pending[this.pending.length - 1];
-        if (!last || last.key !== key) return false;
-        this.pending.pop();
-        return true;
+        if (last && last.key === key && last.rating !== 0) {
+            this.pending.pop();
+            return;
+        }
+        const all = merge([this.entries, this.pending]);
+        const cancelled = new Set(all.filter((e) => e.rating === 0).map((e) => `${e.key} ${e.back}`));
+        const target = all.filter((e) => e.key === key && e.rating !== 0 && !cancelled.has(`${e.key} ${e.at.getTime()}`)).pop();
+        if (target) this.record({ at: new Date(), key, rating: 0, back: String(target.at.getTime()) });
     }
 
     async flush(): Promise<void> {

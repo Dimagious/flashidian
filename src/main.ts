@@ -4,7 +4,9 @@ import { DEFAULTS, FlashySettingTab, type FlashySettings } from "./app/settings"
 import { ProgressStore } from "./app/store";
 import { cardIds } from "./core/key";
 import { parseCards } from "./core/parse";
+import { modeOf, parseStructured } from "./core/structured";
 import { DecksBlock, parseBlock } from "./ui/decks-block";
+import { PasteModal } from "./ui/paste";
 import { ReviewModal } from "./ui/review";
 import { strings } from "./ui/strings";
 
@@ -37,6 +39,12 @@ export default class FlashyPlugin extends Plugin {
 
         this.addRibbonIcon("layers", t.cmdFolder, () => {
             new FolderPicker(this.app, t.pickFolder, (f) => void this.review(notesIn(f))).open();
+        });
+
+        this.addCommand({
+            id: "paste-deck",
+            name: t.cmdPaste,
+            callback: () => new PasteModal(this.app, this.app.workspace.getActiveFile()?.parent ?? this.app.vault.getRoot()).open(),
         });
 
         this.registerMarkdownCodeBlockProcessor("flashy", (source, el, ctx) => {
@@ -77,14 +85,22 @@ export default class FlashyPlugin extends Plugin {
         const decks = files.filter((f) => !f.path.startsWith(progressDir));
         const cards: DeckCard[] = [];
         const withCards: TFile[] = [];
+        // A card that two notes share (a glossary and a deck made from it) is reviewed once.
+        const seen = new Set<string>();
         for (const file of decks) {
-            const parsed = parseCards(await this.app.vault.cachedRead(file));
+            const text = await this.app.vault.cachedRead(file);
+            const mode = modeOf(this.app.metadataCache.getFileCache(file)?.frontmatter?.flashy);
+            const parsed = [...parseCards(text), ...(mode ? parseStructured(text, mode) : [])];
             const ids = cardIds(parsed);
+            let added = 0;
             parsed.forEach((card, i) => {
                 const id = ids[i];
-                if (id) cards.push({ card, path: file.path, deck: file.basename, id });
+                if (!id || seen.has(id.key)) return;
+                seen.add(id.key);
+                cards.push({ card, path: file.path, deck: file.basename, id });
+                added++;
             });
-            if (parsed.length) withCards.push(file);
+            if (added) withCards.push(file);
         }
         if (!cards.length) return null;
         return new DeckProgress(cards, withCards, this.store, () => this.settings.newPerDay);

@@ -51,6 +51,17 @@ describe("review log", () => {
     });
 });
 
+describe("undo in the log", () => {
+    it("drops the review a rating-0 entry points at, on every replay", () => {
+        const good = entry("2026-11-24T10:00:00.000Z", "k", 3);
+        const undo: Entry = { at: at("2026-11-24T10:05:00.000Z"), key: "k", rating: 0, back: String(good.at.getTime()) };
+        const again = entry("2026-11-24T10:06:00.000Z", "k", 1);
+        expect(replay([good, undo]).get("k")).toBeUndefined();
+        expect(replay([good, undo, again]).get("k")?.last).toBe(1);
+        expect(parseLog(newLog("d", [good, undo]))).toEqual([good, undo]);
+    });
+});
+
 describe("schedule", () => {
     const now = at("2026-11-24T12:00:00.000Z");
 

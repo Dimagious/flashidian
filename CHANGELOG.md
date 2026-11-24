@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- Cards without special syntax: a note with `flashy: true` gives cards from its `##` headings, the rows of its tables or the items of its lists (`flashy: headings`, `table` or `list` picks one shape). A glossary is a deck as it is.
+- *Create a deck from pasted text*: terms and definitions from Quizlet, a spreadsheet, a CSV file or a list become a deck note.
+- A card that two notes share is reviewed once.
+- Undo works after the review was written to the log: Flashy appends a line that cancels it, so the log stays append-only.
+- Closing the review while a swiped card is still flying keeps its grade.
+
 ## [0.3.0] - 2026-11-24
 
 - A `flashy` code block with `folder: <path>` draws a deck list in any note: one row per deck with today's cards and a learned bar, a row for all decks, one tap to start the review. It redraws when the review closes.

@@ -42,6 +42,14 @@ const en = {
     allDecks: "All decks",
     blockMeta: (learned: number, total: number, fresh: number): string => `${learned} of ${total} learned, ${fresh} new`,
     blockNoFolder: (path: string): string => (path ? `No folder "${path}".` : "Add a line folder: <path> to this block."),
+    cmdPaste: "Create a deck from pasted text",
+    pasteTitle: "New deck from pasted text",
+    pasteHint: "Paste terms and definitions: from Quizlet (Export), a spreadsheet, a CSV file, or lines like term - definition.",
+    pasteFound: (n: number): string => `Cards found: ${n}`,
+    pasteName: "Deck name",
+    pasteNamePlaceholder: "New deck",
+    pasteCreate: "Create deck",
+    pasteDone: (n: number, name: string): string => `Deck "${name}" created with ${n} cards.`,
 };
 
 export type Strings = typeof en;
@@ -88,6 +96,14 @@ const ru: Strings = {
     allDecks: "Все колоды",
     blockMeta: (learned, total, fresh) => `выучено ${learned} из ${total}, новых ${fresh}`,
     blockNoFolder: (path) => (path ? `Папки «${path}» нет.` : "Добавь в блок строку folder: <путь>."),
+    cmdPaste: "Создать колоду из вставленного текста",
+    pasteTitle: "Новая колода из текста",
+    pasteHint: "Вставь термины и определения: из Quizlet (Export), таблицы, CSV или строки вида термин - определение.",
+    pasteFound: (n) => `Найдено карточек: ${n}`,
+    pasteName: "Название колоды",
+    pasteNamePlaceholder: "Новая колода",
+    pasteCreate: "Создать колоду",
+    pasteDone: (n, name) => `Колода «${name}» создана, карточек: ${n}.`,
 };
 
 export function strings(): Strings {

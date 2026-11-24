@@ -142,3 +142,48 @@ test("the deck list names a missing folder", async ({ obsidian, win }) => {
     await obsidian.openFile("Broken.md", { mode: "preview" });
     await expect(win.locator(".markdown-reading-view .flashy-decks-empty")).toHaveText('No folder "Nope".');
 });
+
+test("a glossary with flashy: true is a deck of its headings", async ({ obsidian, win }) => {
+    await obsidian.openFile("Glossary/Terms.md", { mode: "preview" });
+    await obsidian.runCommand("flashidian:review-note");
+    await win.getByRole("button", { name: "Study 2" }).click();
+    await expect(win.locator(`${card} .flashy-term`)).toHaveText("Agentic Loop");
+    await win.locator(card).click();
+    await expect(win.locator(`${card} .flashy-scroll .callout`)).toBeVisible();
+});
+
+test("pasted text from Quizlet becomes a deck note", async ({ obsidian, win }) => {
+    await obsidian.openFile("Welcome.md", { mode: "preview" });
+    await obsidian.runCommand("flashidian:paste-deck");
+    await win.locator(".flashy-paste-area").fill("Hook\truns code around a tool call\nSkill\ta packaged prompt");
+    await expect(win.locator(".flashy-paste-found")).toHaveText("Cards found: 2");
+    await win.locator(".flashy-paste-modal input[type=text]").fill("Pasted");
+    await win.getByRole("button", { name: "Create deck" }).click();
+    await expect
+        .poll(() => obsidian.evaluate(async (app: App) => {
+            const f = app.vault.getFileByPath("Pasted.md");
+            return f ? app.vault.read(f) : "";
+        }))
+        .toBe("Hook\n?\nruns code around a tool call\n\nSkill\n?\na packaged prompt\n");
+});
+
+test("undo after the reviews were written appends a cancelling line", async ({ obsidian, win }) => {
+    await obsidian.openFile("Decks/Tools.md", { mode: "preview" });
+    await obsidian.runCommand("flashidian:review-note");
+    await win.getByRole("button", { name: "Study 1" }).click();
+    await win.keyboard.press("ArrowRight");
+    await expect(win.locator(".flashy-done")).toBeVisible();
+    // The end of the round writes the log; undo after that cannot drop the line, it cancels it.
+    await expect.poll(() => obsidian.evaluate((app: App) => app.vault.getFiles().some((f) => f.path.startsWith("Flashy/log-")))).toBe(true);
+    await win.getByRole("button", { name: "Undo last card" }).click();
+    await win.getByRole("button", { name: "Close" }).first().click();
+    await expect
+        .poll(() => obsidian.evaluate(async (app: App) => {
+            const log = app.vault.getFiles().find((f) => f.path.startsWith("Flashy/log-"));
+            const lines = log ? (await app.vault.read(log)).split("\n").filter((l) => /^\d{4}-/.test(l)) : [];
+            return lines.map((l) => l.split(" ")[2]).join("");
+        }))
+        .toBe("30");
+    await obsidian.runCommand("flashidian:review-note");
+    await expect(win.locator(".flashy-home-cell.is-new .flashy-home-n")).toHaveText("1");
+});

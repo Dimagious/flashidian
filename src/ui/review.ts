@@ -20,6 +20,8 @@ export class ReviewModal extends Modal {
     private kind: RoundKind = "scheduled";
     private shuffled = false;
     private busy = false;
+    /** The grade of a card in flight, written on close if the modal shuts before the card leaves the screen. */
+    private flying: Grade | null = null;
     private readonly t: Strings = strings();
     private readonly md = new Component();
     private readonly nodes = new Map<number, HTMLElement>();
@@ -59,6 +61,9 @@ export class ReviewModal extends Modal {
     }
 
     onClose(): void {
+        const item = this.session.peek();
+        if (this.flying && item && this.kind === "scheduled") this.progress.record(item, this.flying);
+        this.flying = null;
         void this.progress.save().then(() => this.onClosed?.());
         this.md.unload();
         this.contentEl.empty();
@@ -275,6 +280,7 @@ export class ReviewModal extends Modal {
         const el = this.top();
         if (!el || this.busy) return;
         this.busy = true;
+        this.flying = dir > 0 ? "keep" : "repeat";
         vx = dir * Math.max(Math.abs(vx), 1.6);
         vy = Math.max(-1, Math.min(1, vy));
         el.addClass("is-live");
@@ -288,6 +294,7 @@ export class ReviewModal extends Modal {
             x += vx * dt;
             y += vy * dt;
             this.pose(el, x, y);
+            if (!this.flying) return;
             if (Math.abs(x) > limit) return this.commit(dir > 0 ? "keep" : "repeat");
             activeWindow.requestAnimationFrame(step);
         };
@@ -295,6 +302,7 @@ export class ReviewModal extends Modal {
     }
 
     private commit(g: Grade): void {
+        this.flying = null;
         const item = this.session.peek();
         this.top()?.remove();
         this.nodes.delete(this.session.index);

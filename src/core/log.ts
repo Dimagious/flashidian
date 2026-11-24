@@ -4,16 +4,18 @@
  *
  * One review per line inside a fenced block: `<ISO time> <card key> <rating> <answer hash>`.
  * Rating is FSRS's: 1 again, 2 hard, 3 good, 4 easy. Flashy writes 1 and 3.
+ * Rating 0 takes a review back: its last field is the time (ms) of the review it cancels, not an answer hash.
+ * The log stays append-only, and every device drops the same review on replay.
  */
 export interface Entry {
     at: Date;
     key: string;
-    rating: 1 | 2 | 3 | 4;
+    rating: 0 | 1 | 2 | 3 | 4;
     back: string;
 }
 
 const FENCE = "```flashy-log";
-const LINE = /^(\d{4}-\d{2}-\d{2}T[\d:.]+Z) (\S+) ([1-4]) (\S+)$/;
+const LINE = /^(\d{4}-\d{2}-\d{2}T[\d:.]+Z) (\S+) ([0-4]) (\S+)$/;
 
 export function formatEntry(e: Entry): string {
     return `${e.at.toISOString()} ${e.key} ${e.rating} ${e.back}`;

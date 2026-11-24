@@ -688,3 +688,24 @@
 .flashy-decks-empty {
     color: var(--text-muted);
 }
+
+/* ---------- paste a deck ---------- */
+
+.flashy-paste-hint {
+    margin-top: 0;
+    color: var(--text-muted);
+}
+
+.flashy-paste-area {
+    width: 100%;
+    min-height: 160px;
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-small);
+    resize: vertical;
+}
+
+.flashy-paste-found {
+    margin-top: var(--size-4-2);
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+}
