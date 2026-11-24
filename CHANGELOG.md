@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Quiz: up to 20 multiple choice questions from the deck screen. The question is the first plain paragraph of an answer with the term hidden, the options are four terms from the same review. Right picks move on, wrong ones show the answer; retry the missed at the end. Does not change the schedule.
+
 ## [0.4.0] - 2026-11-24
 
 - Cards without special syntax: a note with `flashy: true` gives cards from its `##` headings, the rows of its tables or the items of its lists (`flashy: headings`, `table` or `list` picks one shape). A glossary is a deck as it is.

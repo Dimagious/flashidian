@@ -37,6 +37,10 @@ Flashy never writes into the notes with your cards. Progress lives in plain Mark
 
 Moving or renaming a deck keeps its progress: a card is recognised by its text, not by its file. If you edit the front of a card, its history follows the answer.
 
+## Quiz
+
+The deck screen also offers a quiz of up to 20 questions: Flashy shows the first plain paragraph of an answer (callouts, lists and tables left out, the term itself hidden as `___`) and four terms from the same review to pick from. A right pick moves on by itself, a wrong one marks the answer and waits. At the end you can retry the ones you missed. Keys 1 to 4 pick, Enter moves on. The quiz does not change the schedule: picking a term is easier than recalling it.
+
 ## Scheduling
 
 Flashy schedules with [FSRS](https://github.com/open-spaced-repetition/ts-fsrs). Swipe right (got it) and a new card comes back in a few days, then in weeks; swipe left (again) and it comes back tomorrow. Each deck opens on a screen with today's cards, new cards and learned cards. New cards are introduced at 20 a day across all decks, a number you can change in settings.

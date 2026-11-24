@@ -1,9 +1,14 @@
 import { type App, Component, getLanguage, MarkdownRenderer, Modal, setIcon } from "obsidian";
 import type { DeckCard, DeckProgress } from "../app/progress";
+import { buildQuiz, plainTerm, type Question } from "../core/quiz";
 import { type Grade, Session, shuffle } from "../core/session";
 import { type Strings, strings } from "./strings";
 
 const STACK = 3;
+/** Questions in one quiz round. */
+const QUIZ_SIZE = 20;
+/** After a right answer the next question comes on its own after this long. */
+const QUIZ_NEXT_MS = 750;
 /** Share of the card width a drag must pass to count as a grade. */
 const THRESHOLD = 0.32;
 /** Spring constants per millisecond: about a 0.4 s period, a little overshoot. */
@@ -35,6 +40,8 @@ export class ReviewModal extends Modal {
     private repeatEl!: HTMLElement;
     private undoBtn!: HTMLButtonElement;
     private actionBtns: HTMLButtonElement[] = [];
+    private quiz: { questions: Question<DeckCard>[]; index: number; right: number; wrong: DeckCard[]; answered: boolean } | null = null;
+    private quizTimer: number | null = null;
     private legend!: HTMLElement;
 
     constructor(
@@ -51,16 +58,20 @@ export class ReviewModal extends Modal {
         this.modalEl.setAttr("data-ignore-swipe", "true");
         this.build();
         const inRound = (): boolean => this.root.hasClass("is-round");
-        this.scope.register([], "ArrowRight", () => (inRound() && this.fling(1), false));
-        this.scope.register([], "ArrowLeft", () => (inRound() && this.fling(-1), false));
-        this.scope.register([], " ", () => (inRound() && this.flip(), false));
-        this.scope.register([], "ArrowUp", () => (inRound() && this.flip(), false));
-        this.scope.register([], "ArrowDown", () => (inRound() && this.flip(), false));
-        this.scope.register([], "Backspace", () => (inRound() && this.undo(), false));
+        const inCards = (): boolean => inRound() && !this.quiz;
+        this.scope.register([], "ArrowRight", () => (inCards() && this.fling(1), false));
+        this.scope.register([], "ArrowLeft", () => (inCards() && this.fling(-1), false));
+        this.scope.register([], " ", () => (inCards() && this.flip(), false));
+        this.scope.register([], "ArrowUp", () => (inCards() && this.flip(), false));
+        this.scope.register([], "ArrowDown", () => (inCards() && this.flip(), false));
+        this.scope.register([], "Backspace", () => (inRound() && !this.quiz && this.undo(), false));
+        for (const n of ["1", "2", "3", "4"]) this.scope.register([], n, () => (this.quiz && this.pick(Number(n) - 1), false));
+        this.scope.register([], "Enter", () => (this.quiz?.answered && this.nextQuestion(), false));
         this.showDeck();
     }
 
     onClose(): void {
+        if (this.quizTimer !== null) window.clearTimeout(this.quizTimer);
         const item = this.session.peek();
         if (this.flying && item && this.kind === "scheduled") this.progress.record(item, this.flying);
         this.flying = null;
@@ -128,8 +139,12 @@ export class ReviewModal extends Modal {
     }
 
     private clearStage(): void {
-        for (const el of Array.from(this.stage.querySelectorAll(".flashy-card, .flashy-done, .flashy-home"))) el.remove();
+        for (const el of Array.from(this.stage.querySelectorAll(".flashy-card, .flashy-done, .flashy-home, .flashy-quiz"))) el.remove();
         this.nodes.clear();
+        if (this.quizTimer !== null) window.clearTimeout(this.quizTimer);
+        this.quizTimer = null;
+        this.quiz = null;
+        this.root.removeClass("is-quiz");
     }
 
     // ---------- deck screen ----------
@@ -156,8 +171,115 @@ export class ReviewModal extends Modal {
         study.disabled = !today.length;
         study.addEventListener("click", () => this.start(today, "scheduled"));
         acts.createEl("button", { text: this.t.practiceAll(s.total) }).addEventListener("click", () => this.start(this.progress.items, "scheduled"));
+        const quiz = this.makeQuiz(this.progress.items);
+        if (quiz.length) acts.createEl("button", { cls: "flashy-quiz-start", text: this.t.quizStart(quiz.length) }).addEventListener("click", () => this.startQuiz(quiz));
         const next = this.progress.nextDue();
         if (!today.length && next) home.createDiv({ cls: "flashy-home-note", text: this.t.nextOn(next.toLocaleDateString(getLanguage(), { day: "numeric", month: "long" })) });
+    }
+
+    // ---------- quiz ----------
+
+    /** Questions about `ask`, with wrong options drawn from every card of this review. */
+    private makeQuiz(ask: readonly DeckCard[]): Question<DeckCard>[] {
+        const all = buildQuiz(this.progress.items, (c) => c.card.front, (c) => c.card.back, Number.POSITIVE_INFINITY);
+        const wanted = new Set(ask);
+        const asked = all.filter((q) => wanted.has(q.item));
+        return asked.slice(0, QUIZ_SIZE);
+    }
+
+    private startQuiz(questions: Question<DeckCard>[]): void {
+        this.clearStage();
+        this.root.addClass("is-round");
+        this.root.addClass("is-quiz");
+        this.quiz = { questions, index: 0, right: 0, wrong: [], answered: false };
+        this.showQuestion();
+    }
+
+    private quizHud(): void {
+        const q = this.quiz;
+        if (!q) return;
+        const n = q.questions.length;
+        this.countEl.setText(`${Math.min(q.index + 1, n)} / ${n}`);
+        this.barEl.setCssProps({ "--flashy-progress": `${n ? (q.index / n) * 100 : 0}%` });
+        this.repeatEl.querySelector(".flashy-n")?.setText(String(q.wrong.length));
+        this.keepEl.querySelector(".flashy-n")?.setText(String(q.right));
+    }
+
+    private showQuestion(): void {
+        const q = this.quiz;
+        if (!q) return;
+        this.stage.querySelector(".flashy-quiz")?.remove();
+        this.quizHud();
+        const question = q.questions[q.index];
+        if (!question) return this.finishQuiz();
+        q.answered = false;
+        const view = this.stage.createDiv({ cls: "flashy-quiz" });
+        const prompt = view.createDiv({ cls: "flashy-quiz-prompt" });
+        prompt.createDiv({ cls: "flashy-deck", text: `${question.item.deck} · ${this.t.quizAsk}` });
+        void MarkdownRenderer.render(this.app, question.prompt, prompt.createDiv({ cls: "flashy-quiz-text markdown-rendered" }), question.item.path, this.md);
+        const list = view.createDiv({ cls: "flashy-quiz-options" });
+        question.options.forEach((o, i) => {
+            const b = list.createEl("button", { cls: "flashy-quiz-option" });
+            b.createSpan({ cls: "flashy-quiz-key", text: String(i + 1) });
+            b.createSpan({ cls: "flashy-quiz-label", text: plainTerm(o.card.front) });
+            b.addEventListener("click", () => this.pick(i));
+        });
+        const next = view.createEl("button", { cls: "mod-cta flashy-quiz-next is-hidden", text: this.t.quizNext });
+        next.addEventListener("click", () => this.nextQuestion());
+    }
+
+    private pick(i: number): void {
+        const q = this.quiz;
+        const question = q?.questions[q.index];
+        if (!q || !question || q.answered || i >= question.options.length) return;
+        q.answered = true;
+        const buttons = Array.from(this.stage.querySelectorAll<HTMLButtonElement>(".flashy-quiz-option"));
+        buttons.forEach((b) => (b.disabled = true));
+        buttons[question.answer]?.addClass("is-right");
+        if (i === question.answer) {
+            q.right++;
+            this.bump(this.keepEl);
+            this.quizTimer = window.setTimeout(() => this.nextQuestion(), this.reduceMotion ? 0 : QUIZ_NEXT_MS);
+        } else {
+            q.wrong.push(question.item);
+            buttons[i]?.addClass("is-wrong");
+            this.bump(this.repeatEl);
+            this.stage.querySelector(".flashy-quiz-next")?.removeClass("is-hidden");
+        }
+        this.quizHud();
+    }
+
+    private nextQuestion(): void {
+        const q = this.quiz;
+        if (!q || !q.answered) return;
+        if (this.quizTimer !== null) window.clearTimeout(this.quizTimer);
+        this.quizTimer = null;
+        q.index++;
+        this.showQuestion();
+    }
+
+    private finishQuiz(): void {
+        const q = this.quiz;
+        if (!q) return;
+        const n = q.questions.length;
+        const wrong = q.wrong.slice();
+        const done = this.stage.createDiv({ cls: "flashy-done" });
+        const ring = done.createDiv({ cls: "flashy-ring" });
+        const svg = ring.createSvg("svg", { attr: { viewBox: "0 0 150 150" } });
+        svg.createSvg("circle", { cls: "flashy-ring-track", attr: { cx: 75, cy: 75, r: 62 } });
+        const val = svg.createSvg("circle", { cls: "flashy-ring-value", attr: { cx: 75, cy: 75, r: 62 } });
+        ring.createDiv({ cls: "flashy-ring-num", text: String(q.right) }).createEl("small", { text: this.t.of(n) });
+        done.createEl("h2", { text: wrong.length ? this.t.quizScore(q.right, n) : this.t.quizPerfect });
+        done.createDiv({ cls: "flashy-home-note", text: this.t.quizNote });
+        const acts = done.createDiv({ cls: "flashy-acts" });
+        if (wrong.length) {
+            const again = this.makeQuiz(wrong);
+            if (again.length) acts.createEl("button", { cls: "mod-cta", text: this.t.quizRetry(again.length) }).addEventListener("click", () => this.startQuiz(again));
+        }
+        acts.createEl("button", { cls: wrong.length ? "" : "mod-cta", text: this.t.toDeck }).addEventListener("click", () => this.showDeck());
+        activeWindow.requestAnimationFrame(() =>
+            activeWindow.requestAnimationFrame(() => val.setCssProps({ "--flashy-share": String(n ? q.right / n : 0) })),
+        );
     }
 
     // ---------- round ----------

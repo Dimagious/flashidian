@@ -11,7 +11,7 @@ Name vs id: `name` must not resemble "Obsidian" (catalog review). So `id` and re
 ## Layout
 
 ```
-src/core   pure: parse (the `?` format), structured (cards from headings, tables, lists in notes with a `flashy` property), paste (Quizlet, TSV, CSV, list text into pairs), session (one round), key (card identity), log (review log format), schedule (FSRS replay, stats, today's queue). Carries the 90 percent coverage gate.
+src/core   pure: parse (the `?` format), structured (cards from headings, tables, lists in notes with a `flashy` property), paste (Quizlet, TSV, CSV, list text into pairs), quiz (gist of an answer, masking, multiple choice), session (one round), key (card identity), log (review log format), schedule (FSRS replay, stats, today's queue). Carries the 90 percent coverage gate.
 src/app    store (vault I/O: device log, summaries), progress (cards of one review bound to the store), settings (declarative tab)
 src/ui     review modal (deck screen, stack, flip, drag, spring, end-of-round ring), decks-block (the `flashy` code block: deck list), strings (en, ru)
 src/main.ts  commands: review the current note, review a folder (picker, ribbon, folder context menu)
@@ -51,6 +51,7 @@ Decided after an architect and a marketer reviewed the options: notes with cards
 - Reviews are batched: flushed at the end of a round, on close and 15 s after the last grade. Undo takes back an unwritten review only.
 - Practice rounds (the cards sent left, again) write nothing.
 - Undo of a written review appends rating 0 with the cancelled review's time in the last field; replay skips both on every device.
+- Quiz terms go through `plainTerm`: strip bold and code marks only. Stripping every `_` turned `stop_reason` into `stopreason` (caught by e2e).
 - No regex lookbehind anywhere: iOS before 16.4 cannot parse it, and `obsidianmd/regex-lookbehind` fails the lint.
 
 ## Not built yet

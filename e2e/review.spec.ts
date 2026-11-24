@@ -187,3 +187,59 @@ test("undo after the reviews were written appends a cancelling line", async ({ o
     await obsidian.runCommand("flashidian:review-note");
     await expect(win.locator(".flashy-home-cell.is-new .flashy-home-n")).toHaveText("1");
 });
+
+test("a quiz: pick the term for a definition, a right pick moves on, a wrong one waits, then retry the missed", async ({ obsidian, win }) => {
+    await obsidian.openFile("Study.md", { mode: "preview" });
+    await win.locator(".markdown-reading-view .flashy-deck-row").first().click();
+    await win.getByRole("button", { name: "Quiz: 4 questions" }).click();
+
+    const answers: [string, string][] = [
+        ["A control flow", "Agentic Loop"],
+        ["Why the model stopped", "stop_reason"],
+        ["A separate Claude instance", "Subagent"],
+        ["Forces, allows or forbids", "tool_choice"],
+    ];
+    const termFor = async (): Promise<string> => {
+        const prompt = (await win.locator(".flashy-quiz-text").textContent()) ?? "";
+        const hit = answers.find(([p]) => prompt.includes(p));
+        if (!hit) throw new Error(`unknown prompt: ${prompt}`);
+        return hit[1];
+    };
+
+    for (let i = 0; i < 4; i++) {
+        await expect(win.locator(".flashy-count")).toHaveText(`${i + 1} / 4`);
+        const term = await termFor();
+        const options = win.locator(".flashy-quiz-option");
+        if (i === 1) {
+            // A wrong pick: red on the pick, green on the answer, and the round waits for Next.
+            await options.filter({ hasNotText: term }).first().click();
+            await expect(win.locator(".flashy-quiz-option.is-wrong")).toHaveCount(1);
+            await expect(win.locator(".flashy-quiz-option.is-right")).toContainText(term);
+            await win.getByRole("button", { name: "Next" }).click();
+        } else {
+            await options.filter({ hasText: term }).click();
+            await expect(win.locator(".flashy-quiz-option.is-right")).toHaveCount(1);
+        }
+    }
+
+    await expect(win.locator(".flashy-done h2")).toHaveText("3 of 4 right");
+    await expect(win.locator(".flashy-pill.is-keep .flashy-n")).toHaveText("3");
+    await win.getByRole("button", { name: "Retry the 1 missed" }).click();
+    await expect(win.locator(".flashy-count")).toHaveText("1 / 1");
+
+    // The quiz writes nothing to the review log.
+    await win.getByRole("button", { name: "Close" }).first().click();
+    expect(await obsidian.evaluate((app: App) => app.vault.getFiles().some((f) => f.path.startsWith("Flashy/log-")))).toBe(false);
+});
+
+test("the quiz fits the phone", async ({ obsidian, win }) => {
+    await obsidian.mobile();
+    await obsidian.openFile("Study.md", { mode: "preview" });
+    await win.locator(".markdown-reading-view .flashy-deck-row").first().click();
+    await win.getByRole("button", { name: "Quiz: 4 questions" }).click();
+    await obsidian.settle({ root: ".flashy-modal" });
+    await obsidian.checkLayout({ root: ".flashy-modal" });
+    await win.locator(".flashy-quiz-option").first().click();
+    await win.waitForTimeout(450);
+    await win.screenshot({ path: ".e2e/phone-quiz.png" });
+});
