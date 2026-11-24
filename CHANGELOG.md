@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-24
+
 - FSRS scheduling: swipe right and a card comes back in days, then weeks; swipe left and it comes back tomorrow.
 - A deck screen before the review: today's cards, new cards, learned cards, and when the next cards are due.
 - Progress lives in the vault, in a `Flashy/` folder: one review log per device, so syncing two devices cannot conflict, and one note per deck with its numbers as properties for Bases. Notes with cards are never written to.
