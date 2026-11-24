@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-24
+
 - Cards without special syntax: a note with `flashy: true` gives cards from its `##` headings, the rows of its tables or the items of its lists (`flashy: headings`, `table` or `list` picks one shape). A glossary is a deck as it is.
 - *Create a deck from pasted text*: terms and definitions from Quizlet, a spreadsheet, a CSV file or a list become a deck note.
 - A card that two notes share is reviewed once.
