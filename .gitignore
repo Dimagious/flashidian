@@ -1,0 +1,8 @@
+node_modules/
+main.js
+.e2e/
+coverage/
+playwright-report/
+test-results/
+.opdk/
+out/

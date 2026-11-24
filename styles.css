@@ -1,0 +1,484 @@
+/* Flashy review modal. Colors come from the active Obsidian theme. */
+
+.flashy-modal {
+    --flashy-keep-color: var(--color-green);
+    --flashy-repeat-color: var(--color-orange);
+    width: min(520px, 94vw);
+    height: min(820px, 92vh);
+    max-height: none;
+    padding: 0;
+}
+
+.is-phone .flashy-modal {
+    width: 100vw;
+    height: 100%;
+    max-width: none;
+    border-radius: 0;
+}
+
+.flashy-modal .modal-content {
+    height: 100%;
+    min-width: 0;
+}
+
+.flashy-modal .modal-close-button {
+    z-index: 10;
+}
+
+.flashy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-4-3);
+    height: 100%;
+    min-width: 0;
+    padding: var(--size-4-8) var(--size-4-4) calc(var(--size-4-4) + env(safe-area-inset-bottom, 0px));
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.is-phone .flashy {
+    padding-top: calc(var(--size-4-12) + env(safe-area-inset-top, 0px));
+}
+
+/* ---------- progress ---------- */
+
+.flashy-hud {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: var(--size-4-3);
+    align-items: center;
+}
+
+.flashy-pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--size-4-1);
+    min-width: 52px;
+    padding: var(--size-4-1) var(--size-4-2);
+    border-radius: var(--radius-s);
+    font-size: var(--font-ui-small);
+    font-weight: var(--font-semibold);
+    font-variant-numeric: tabular-nums;
+}
+
+.flashy-pill .svg-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.flashy-pill.is-repeat {
+    color: var(--flashy-repeat-color);
+    background: rgba(var(--color-orange-rgb), 0.14);
+}
+
+.flashy-pill.is-keep {
+    color: var(--flashy-keep-color);
+    background: rgba(var(--color-green-rgb), 0.14);
+}
+
+.flashy-pill.is-bump {
+    animation: flashy-bump 0.35s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes flashy-bump {
+    40% {
+        transform: scale(1.25);
+    }
+}
+
+.flashy-prog {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--size-4-1);
+}
+
+.flashy-count {
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    font-weight: var(--font-semibold);
+    font-variant-numeric: tabular-nums;
+}
+
+.flashy-bar {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--background-modifier-border);
+    overflow: hidden;
+}
+
+.flashy-bar > div {
+    width: var(--flashy-progress, 0%);
+    height: 100%;
+    border-radius: 3px;
+    background: var(--interactive-accent);
+    transition: width 0.35s ease;
+}
+
+/* ---------- card stack ---------- */
+
+.flashy-stage {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+}
+
+.flashy-card {
+    --flashy-x: 0px;
+    --flashy-y: 0px;
+    --flashy-r: 0deg;
+    --flashy-keep: 0;
+    --flashy-repeat: 0;
+    position: absolute;
+    inset: 0 0 26px;
+    margin: auto;
+    width: 100%;
+    max-width: 460px;
+    max-height: 620px;
+    perspective: 1600px;
+    touch-action: none;
+    cursor: grab;
+    transform: translate(var(--flashy-x), var(--flashy-y)) rotate(var(--flashy-r));
+    transition: transform 0.42s cubic-bezier(0.2, 1.25, 0.4, 1), opacity 0.3s;
+    will-change: transform;
+}
+
+.flashy-card.is-flipped {
+    touch-action: pan-y;
+}
+
+.flashy-card[data-depth="0"] {
+    z-index: 3;
+}
+
+.flashy-card[data-depth="1"] {
+    z-index: 2;
+    opacity: 0.85;
+    pointer-events: none;
+    transform: translateY(14px) scale(0.95);
+}
+
+.flashy-card[data-depth="2"] {
+    z-index: 1;
+    opacity: 0.5;
+    pointer-events: none;
+    transform: translateY(28px) scale(0.9);
+}
+
+.flashy-card.is-live {
+    cursor: grabbing;
+    transition: none;
+}
+
+.flashy-flipper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    -webkit-transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.3, 1.35, 0.45, 1);
+}
+
+.flashy-card.is-flipped .flashy-flipper {
+    transform: rotateY(180deg);
+}
+
+/* No backdrop-filter and no pseudo-elements on the faces: both break backface-visibility in WebKit. */
+.flashy-face {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-l);
+    background: var(--background-primary);
+    box-shadow: var(--shadow-s);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+.theme-dark .flashy-face {
+    background: var(--background-secondary);
+}
+
+.flashy-back {
+    transform: rotateY(180deg);
+}
+
+.flashy-front {
+    justify-content: space-between;
+    padding: var(--size-4-5);
+}
+
+.flashy-deck {
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    font-weight: var(--font-semibold);
+    letter-spacing: 0.04em;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.flashy-term {
+    overflow-wrap: anywhere;
+    font-size: clamp(24px, 7vw, 34px);
+    font-weight: var(--font-bold);
+    line-height: 1.2;
+    text-align: center;
+    text-wrap: balance;
+}
+
+.flashy-term p {
+    margin: 0;
+}
+
+.flashy-hint {
+    align-self: center;
+    color: var(--text-faint);
+    font-size: var(--font-ui-small);
+}
+
+.flashy-scroll {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--size-4-5) var(--size-4-5) var(--size-4-6);
+    font-size: var(--font-text-size);
+    line-height: var(--line-height-normal);
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.flashy-scroll > :first-child {
+    margin-top: 0;
+}
+
+.flashy-glow {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    border-radius: var(--radius-l);
+    pointer-events: none;
+    box-shadow:
+        inset 0 0 0 3px rgba(var(--color-green-rgb), var(--flashy-keep)),
+        inset 0 0 0 3px rgba(var(--color-orange-rgb), var(--flashy-repeat));
+}
+
+.flashy-stamp {
+    position: absolute;
+    top: 26px;
+    z-index: 5;
+    padding: var(--size-4-2) var(--size-4-3);
+    border: 2.5px solid currentColor;
+    border-radius: var(--radius-m);
+    background: var(--background-primary);
+    font-size: 18px;
+    font-weight: var(--font-bold);
+    letter-spacing: 0.06em;
+    pointer-events: none;
+    text-transform: uppercase;
+}
+
+.flashy-stamp.is-keep {
+    left: 22px;
+    color: var(--flashy-keep-color);
+    opacity: var(--flashy-keep);
+    transform: rotate(-12deg);
+}
+
+.flashy-stamp.is-repeat {
+    right: 22px;
+    color: var(--flashy-repeat-color);
+    opacity: var(--flashy-repeat);
+    transform: rotate(12deg);
+}
+
+.flashy-legend {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 var(--size-4-1);
+    color: var(--text-faint);
+    font-size: var(--font-ui-smaller);
+}
+
+.flashy-legend.is-hidden {
+    visibility: hidden;
+}
+
+/* ---------- buttons ---------- */
+
+.flashy-controls {
+    display: grid;
+    grid-template-columns: 44px repeat(3, minmax(0, 1fr)) 44px;
+    gap: 6px;
+}
+
+.flashy-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--size-4-1);
+    min-width: 0;
+    height: 46px;
+    padding: 0 var(--size-4-1);
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.flashy-btn .svg-icon {
+    flex: none;
+    width: 18px;
+    height: 18px;
+}
+
+.flashy-btn.is-small {
+    padding: 0;
+    color: var(--text-muted);
+}
+
+.flashy-btn.is-small.is-active {
+    color: var(--interactive-accent);
+}
+
+.flashy-btn.is-repeat {
+    color: var(--flashy-repeat-color);
+    background: rgba(var(--color-orange-rgb), 0.12);
+    box-shadow: none;
+}
+
+.flashy-btn.is-keep {
+    color: var(--flashy-keep-color);
+    background: rgba(var(--color-green-rgb), 0.12);
+    box-shadow: none;
+}
+
+.flashy-btn:disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+/* ---------- end of round ---------- */
+
+.flashy-done {
+    position: absolute;
+    inset: 0 0 26px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--size-4-4);
+    margin: auto;
+    max-width: 460px;
+    max-height: 620px;
+    padding: var(--size-4-6);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-l);
+    background: var(--background-primary);
+    box-shadow: var(--shadow-s);
+    text-align: center;
+    animation: flashy-pop 0.5s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+.theme-dark .flashy-done {
+    background: var(--background-secondary);
+}
+
+@keyframes flashy-pop {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+}
+
+.flashy-done h2 {
+    margin: 0;
+    text-wrap: balance;
+}
+
+.flashy-done p {
+    max-width: 30ch;
+    margin: 0;
+    color: var(--text-muted);
+}
+
+.flashy-ring {
+    position: relative;
+    width: 150px;
+    height: 150px;
+}
+
+.flashy-ring svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.flashy-ring circle {
+    fill: none;
+    stroke-width: 12;
+}
+
+.flashy-ring-track {
+    stroke: rgba(var(--color-orange-rgb), 0.2);
+}
+
+.flashy-ring-value {
+    --flashy-share: 0;
+    stroke: var(--flashy-keep-color);
+    stroke-dasharray: 389.56;
+    stroke-dashoffset: calc(389.56 * (1 - var(--flashy-share)));
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s cubic-bezier(0.3, 1, 0.4, 1) 0.15s;
+}
+
+.flashy-ring-num {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    font-size: 34px;
+    font-weight: var(--font-bold);
+    font-variant-numeric: tabular-nums;
+}
+
+.flashy-ring-num small {
+    display: block;
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    font-weight: var(--font-normal);
+}
+
+.flashy-acts {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-4-2);
+    width: 100%;
+    max-width: 280px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .flashy-card,
+    .flashy-flipper,
+    .flashy-bar > div,
+    .flashy-ring-value {
+        transition: none;
+    }
+
+    .flashy-done,
+    .flashy-pill.is-bump {
+        animation: none;
+    }
+}
+
+/* Phone fonts are larger: the three labelled buttons drop their icons so the words fit. */
+.is-phone .flashy-btn:not(.is-small) .svg-icon {
+    display: none;
+}

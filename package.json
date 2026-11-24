@@ -1,0 +1,32 @@
+{
+  "name": "flashidian",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Flashcards for Obsidian with a 3D flip and swipe grading.",
+  "scripts": {
+    "build": "opdk build",
+    "dev:vault": "opdk build --vault --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.e2e.json --noEmit",
+    "test": "vitest run --coverage",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "scorecard:check": "opdk scan",
+    "release:check": "opdk release check && npm run scorecard:check && npm run lint && npm run typecheck && npm run test",
+    "e2e": "npm run build && playwright test"
+  },
+  "license": "MIT",
+  "author": "Dimagious",
+  "devDependencies": {
+    "@playwright/test": "^1.65.0",
+    "@types/node": "^22.20.5",
+    "@vitest/coverage-v8": "^5.1.1",
+    "electron": "^44.10.2",
+    "eslint": "^10.15.0",
+    "obsidian": "^1.14.4",
+    "obsidian-plugin-dev-kit": "0.4.1",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
+  },
+  "type": "module"
+}
