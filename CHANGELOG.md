@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-24
+
 - A close button in a top bar with the deck name, clear of the iPhone status bar and notch. Obsidian's own close button is hidden in the review, on desktop and on mobile.
 
 ## [0.1.1] - 2026-11-24
