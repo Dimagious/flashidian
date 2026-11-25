@@ -17,7 +17,7 @@ export function demoHistory(now: Date, folder = "e2e-vault.pristine/Decks"): str
     for (const name of readdirSync(folder).filter((f) => f.endsWith(".md")).sort()) {
         const md = readFileSync(`${folder}/${name}`, "utf8");
         const mode = modeOf(/^flashy:\s*(\S+)\s*$/m.exec(md)?.[1]);
-        cardIds(mode ? parseStructured(md, mode) : parseCards(md)).forEach(({ key, back }, i) => {
+        cardIds(mode && mode !== "note" ? parseStructured(md, mode) : parseCards(md)).forEach(({ key, back }, i) => {
             if (i % 5 === 0) return;
             if (i % 5 === 1) entries.push({ at: at(1), key, rating: 1, back });
             else for (const d of [30, 21, 9]) entries.push({ at: at(d + (i % 3)), key, rating: 3, back });

@@ -1,11 +1,11 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { cardIds } from "./key";
 import { type Card, parseCards } from "./parse";
 import { parsePasted } from "./paste";
 import { buildMatch, MATCH_PAIRS } from "./match";
 import { buildQuiz, plainTerm } from "./quiz";
-import { modeOf, parseStructured } from "./structured";
+import { modeOf, noteCard, noteFront, parseStructured } from "./structured";
 
 /** The seed vault is the base of the e2e tests and the demo films; these checks keep it usable for both. */
 const VAULT = "e2e-vault.pristine";
@@ -13,7 +13,7 @@ const VAULT = "e2e-vault.pristine";
 function deck(path: string): Card[] {
     const md = readFileSync(`${VAULT}/${path}`, "utf8");
     const mode = modeOf(/^flashy:\s*(\S+)\s*$/m.exec(md)?.[1]);
-    return mode ? parseStructured(md, mode) : parseCards(md);
+    return mode && mode !== "note" ? parseStructured(md, mode) : parseCards(md);
 }
 
 const DECKS: [string, number][] = [
@@ -21,6 +21,7 @@ const DECKS: [string, number][] = [
     ["Decks/Biology - The Cell.md", 8],
     ["Decks/Geography - Capitals.md", 10],
     ["Decks/Cooking - Techniques.md", 8],
+    ["Decks/Stars - The Night Sky.md", 6],
 ];
 
 describe("seed vault", () => {
@@ -50,6 +51,26 @@ describe("seed vault", () => {
             const term = plainTerm(t.item.front).toLowerCase();
             if (t.label.split(/\s+/).length > 3) expect(t.label.toLowerCase()).not.toContain(term);
         }
+    });
+
+    it("the stars deck reads question callouts only, the nested answer split from a two-line question", () => {
+        const cards = deck("Decks/Stars - The Night Sky.md");
+        expect(cards[2]?.front).toBe("The Moon always shows Earth the same face.\nWhy?");
+        expect(cards[2]?.back).toContain("about 27 days");
+        expect(cards.some((c) => c.front.includes("Tonight"))).toBe(false);
+    });
+
+    it("the wildlife folder is five notes of one card each, the octopus asks its own question", () => {
+        const dir = `${VAULT}/Decks/Wildlife - Animals`;
+        const cards = readdirSync(dir).sort().map((f) => {
+            const md = readFileSync(`${dir}/${f}`, "utf8");
+            expect(modeOf(/^flashy:\s*(\S+)\s*$/m.exec(md)?.[1])).toBe("note");
+            const name = f.replace(/\.md$/, "");
+            return noteCard(md, noteFront(name, "Wildlife - Animals", false, /^flashy-prompt:\s*(.+)$/m.exec(md)?.[1]), name);
+        });
+        expect(cards.map((c) => c?.front)).toEqual(["Camel", "Elephant", "Hummingbird", "Why does an octopus have three hearts?", "Penguin"]);
+        expect(cards[0]?.back.startsWith("A camel stores fat")).toBe(true);
+        expect(new Set(cardIds(cards.filter((c) => c !== null)).map((c) => c.key)).size).toBe(5);
     });
 
     it("the glossary keeps its callout, list and table inside the answers", () => {

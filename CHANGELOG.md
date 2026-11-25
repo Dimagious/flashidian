@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Added
+
+- Question callouts as cards (`flashy: callouts`): `> [!question] Front` with the answer in its body, or a longer question with the answer in a nested `> [!answer]` callout. Other callouts stay notes.
+- A note as one card (`flashy: note`): the note's name (or its `flashy-prompt`) on the front, the whole note as the answer. Such notes in one folder make one deck with one progress note, `Flashy/<folder> (notes).md`.
+
+### Fixed
+
+- A deck list drawn while Obsidian was still indexing notes (on startup or right after a sync) could miss decks that opt in with the `flashy` property. Flashy now reads the property from the note itself.
+
 ## [0.8.0] - 2026-11-25
 
 ### Added

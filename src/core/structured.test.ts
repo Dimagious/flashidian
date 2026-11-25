@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { deckNote, parsePasted } from "./paste";
 import { parseCards } from "./parse";
-import { modeOf, parseStructured } from "./structured";
+import { modeOf, noteCard, noteFront, parseStructured } from "./structured";
 
 describe("modeOf", () => {
     it("reads the flashy property", () => {
@@ -11,6 +11,8 @@ describe("modeOf", () => {
         expect(modeOf("table")).toBe("table");
         expect(modeOf("headings")).toBe("headings");
         expect(modeOf("list")).toBe("list");
+        expect(modeOf("callouts")).toBe("callouts");
+        expect(modeOf("note")).toBe("note");
         expect(modeOf(false)).toBeNull();
         expect(modeOf(undefined)).toBeNull();
         expect(modeOf("cards")).toBeNull();
@@ -117,5 +119,91 @@ describe("parsePasted", () => {
             ["Hook", "runs code"],
             ["Skill", "a prompt"],
         ]);
+    });
+});
+
+describe("callout cards", () => {
+    const note = [
+        "---",
+        "flashy: callouts",
+        "---",
+        "> [!Question|exam]- How far is the moon?",
+        "> 384,400 km",
+        ">",
+        "> On average.",
+        "",
+        "> [!faq]+ **Bold** front",
+        "> back",
+        "",
+        "> [!question]",
+        "> Which planet is the largest,",
+        "> and how big is it?",
+        "> > [!answer]-",
+        "> > Jupiter.",
+        ">>",
+        ">> About 11 Earths across.",
+        "",
+        "> [!question]",
+        "> No title and no answer: not a card.",
+        "",
+        "> [!question] Open question, nothing under it",
+        "",
+        "> [!help]- A hint, not a card",
+        "> text",
+        "",
+        "```",
+        "> [!question] Inside code",
+        "> no",
+        "```",
+        "",
+        "> [!question] Answer callout with a title",
+        "> > [!answer] Paris",
+        "> > The capital.",
+    ].join("\n");
+
+    it("reads question callouts: title front, body back, blank lines kept, fold marks and metadata ignored", () => {
+        const cards = parseStructured(note, "callouts");
+        expect(cards.map((c) => c.front)).toEqual([
+            "How far is the moon?",
+            "**Bold** front",
+            "Which planet is the largest,\nand how big is it?",
+            "Answer callout with a title",
+        ]);
+        expect(cards[0]?.back).toBe("384,400 km\n\nOn average.");
+        expect(cards[0]?.line).toBe(3);
+        expect(cards[1]?.back).toBe("back");
+        expect(cards[2]?.back).toBe("Jupiter.\n\nAbout 11 Earths across.");
+        expect(cards[3]?.back).toBe("Paris\nThe capital.");
+    });
+
+    it("come last in auto, so a note that had cards keeps them", () => {
+        const both = ["## Heading", "", "text", "", "> [!question] Q", "> A"].join("\n");
+        expect(parseStructured(both, "auto").map((c) => c.front)).toEqual(["Heading"]);
+        expect(parseStructured("> [!question] Q\n> A", "auto").map((c) => c.front)).toEqual(["Q"]);
+    });
+});
+
+describe("a note as one card", () => {
+    it("takes the prompt, else the file name, with the folder when the name is not unique", () => {
+        expect(noteFront("Osmosis", "Biology", false)).toBe("Osmosis");
+        expect(noteFront("Introduction", "Biology", true)).toBe("Introduction (Biology)");
+        expect(noteFront("Introduction", "", true)).toBe("Introduction");
+        expect(noteFront("Osmosis", "Biology", true, " What is osmosis? ")).toBe("What is osmosis?");
+        expect(noteFront("Osmosis", "Biology", false, 42)).toBe("Osmosis");
+        expect(noteFront("Osmosis", "Biology", false, "  ")).toBe("Osmosis");
+    });
+
+    it("is the whole body: no frontmatter, no heading that repeats the name, no SR comments", () => {
+        const md = ["---", "flashy: note", "---", "# Osmosis", "", "Water moves across a membrane.", "", "> [!tip] Remember", "> Low to high concentration.", "<!--SR:!2026-01-01,3,250-->"].join("\n");
+        const card = noteCard(md, "Osmosis", "Osmosis");
+        expect(card?.front).toBe("Osmosis");
+        expect(card?.back).toBe("Water moves across a membrane.\n\n> [!tip] Remember\n> Low to high concentration.");
+        expect(card?.line).toBe(3);
+    });
+
+    it("keeps a first heading that says something else, and gives no card for an empty note", () => {
+        expect(noteCard("# Summary\ntext", "Osmosis", "Osmosis")?.back).toBe("# Summary\ntext");
+        expect(noteCard("---\nflashy: note\n---\n# Osmosis\n", "Osmosis", "Osmosis")).toBeNull();
+        expect(noteCard("text", " ", "x")).toBeNull();
     });
 });

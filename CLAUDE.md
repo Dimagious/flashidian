@@ -11,7 +11,7 @@ Name vs id: `name` must not resemble "Obsidian" (catalog review). So `id` and re
 ## Layout
 
 ```
-src/core   pure: parse (the `?` format), structured (cards from headings, tables, lists in notes with a `flashy` property), paste (Quizlet, TSV, CSV, list text into pairs), quiz (gist of an answer, masking, multiple choice), session (one round), key (card identity), log (review log format), schedule (FSRS replay, stats, today's queue). Carries the 90 percent coverage gate.
+src/core   pure: parse (the `?` format), structured (cards from headings, tables, lists, question callouts in notes with a `flashy` property; a whole note as one card), paste (Quizlet, TSV, CSV, list text into pairs), quiz (gist of an answer, masking, multiple choice), session (one round), key (card identity), log (review log format), schedule (FSRS replay, stats, today's queue). Carries the 90 percent coverage gate.
 src/app    store (vault I/O: device log, summaries), progress (cards of one review bound to the store), settings (declarative tab)
 src/ui     review modal (deck screen, stack, flip, drag, spring, end-of-round ring), decks-block (the `flashy` code block: deck list), strings (en, ru)
 src/main.ts  commands: review the current note, review a folder (picker, ribbon, folder context menu)
@@ -56,12 +56,14 @@ Decided after an architect and a marketer reviewed the options: notes with cards
 
 - The quiz hides a card's term in its own answer only when the answer is a sentence (more than three words): a short answer is a name, and "Mexico City" masked as "___ City" read as a bug.
 
-- Match keeps its best time as `flashy-match-best` (seconds) in `Flashy/<deck>.md`: `writeSummary` sets only its own keys, so it survives. Only a one-note review has a best; nothing goes to the review log. Its clock redraws every 100 ms, so e2e `settle` watches `.flashy-match`, not the modal.
+- A deck (`Deck` in `app/progress.ts`) is a note, or a folder of `flashy: note` notes: one row in the deck list, one summary note (`Flashy/<folder> (notes).md`, so a folder note `Biology/Biology.md` keeps its own). A note-card's front gets its folder when the file name is not unique in the whole vault, so its key does not depend on which notes a review takes.
+- `build()` reads properties from the note's text (`getFrontMatterInfo` + `parseYaml`), not from the metadata cache: a deck list drawn while Obsidian still indexes (startup, a sync) missed `flashy:` decks. Seen as a flaky row count in e2e.
+- Match keeps its best time as `flashy-match-best` (seconds) in `Flashy/<deck>.md`: `writeSummary` sets only its own keys, so it survives. Only a review of one deck has a best; nothing goes to the review log. Its clock redraws every 100 ms, so e2e `settle` watches `.flashy-match`, not the modal.
 - Front side (`term`, `definition`, `mixed`) lives in settings and is switched on the deck screen through `ReviewPrefs`; a definition-first card masks its term with the same rule as the quiz. Speech is the Web Speech API (`speechSynthesis`), no network: the term side takes `flashy-lang`, an answer is guessed (Cyrillic means ru, else en). Only the top card shows its speaker: stacked cards are scaled below the 44 px touch target.
 
 ## Seed vault: the base of tests and demos
 
-`e2e-vault.pristine/` holds decks anyone recognises, in English, one card format per topic: `Decks/Spanish - Kitchen` (`?` cards), `Biology - The Cell` (headings, `flashy: true`, with a callout, a list and a table inside answers), `Geography - Capitals` (table), `Cooking - Techniques` (list). `e2e/data/music-tempo-quizlet.tsv` is a Quizlet export for the paste flow. Parser traps (code, SR comments, repeated fronts, shared answers, a long answer) live in `Edge cases/`, out of the demo decks. No AI or IT terms in the demo decks, and never notes from Dmitriy's vault.
+`e2e-vault.pristine/` holds decks anyone recognises, in English, one card format per topic: `Decks/Spanish - Kitchen` (`?` cards), `Biology - The Cell` (headings, `flashy: true`, with a callout, a list and a table inside answers), `Geography - Capitals` (table), `Cooking - Techniques` (list), `Stars - The Night Sky` (question callouts), `Wildlife - Animals/` (a folder of `flashy: note` notes; `demoHistory` skips it). `e2e/data/music-tempo-quizlet.tsv` is a Quizlet export for the paste flow. Parser traps (code, SR comments, repeated fronts, shared answers, a long answer) live in `Edge cases/`, out of the demo decks. No AI or IT terms in the demo decks, and never notes from Dmitriy's vault.
 
 - `src/core/seed.test.ts` keeps it usable: card counts, unique keys, four options per question in both quiz directions, no term leaking into a sentence. Change a deck, update the counts there and in `e2e/review.spec.ts`.
 - `e2e/history.ts` `demoHistory(now)` writes a review log dated back from `now` (per five cards: one new, one missed yesterday, three learned). Seed it with `test.use({ seed: { files: { "Flashy/log-demo.md": demoHistory(new Date()) } } })` for a deck in use; a film pairs it with `demo.freezeTime`.

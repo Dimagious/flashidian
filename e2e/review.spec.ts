@@ -175,7 +175,7 @@ test("a deck list in a note starts a review with one tap and redraws after it", 
     await obsidian.openFile("Study.md", { mode: "preview" });
     // Obsidian also renders the block in the hidden editor of the tab; the reading view is the one on screen.
     const rows = win.locator(".markdown-reading-view .flashy-deck-row");
-    await expect(rows).toHaveCount(5);
+    await expect(rows).toHaveCount(7);
     await expect(rows.nth(0).locator(".flashy-deck-name")).toHaveText("All decks");
     await expect(rows.nth(0).locator(".flashy-deck-today-n")).toHaveText("20");
     await expect(rows.nth(1).locator(".flashy-deck-name")).toHaveText("Biology - The Cell");
@@ -219,6 +219,69 @@ test("a glossary with flashy: true is a deck of its headings", async ({ obsidian
     await expect(win.locator(`${card} .flashy-term`)).toHaveText("Nucleus");
     await win.locator(card).click();
     await expect(win.locator(`${card} .flashy-scroll .callout`)).toBeVisible();
+});
+
+test("question callouts are cards: the title asks, the body answers, a nested answer splits a longer question", async ({ obsidian, win }) => {
+    await obsidian.openFile("Decks/Stars - The Night Sky.md", { mode: "preview" });
+    await obsidian.runCommand("flashidian:review-note");
+    await win.getByRole("button", { name: "Study 6" }).click();
+    await expect(win.locator(`${card} .flashy-term`)).toHaveText("What is the brightest star in the night sky?");
+    await win.locator(card).click();
+    await expect(win.locator(`${card} .flashy-scroll`)).toContainText("Sirius");
+    await win.keyboard.press("ArrowRight");
+    await expect(win.locator(".flashy-count")).toHaveText("2 / 6");
+    await win.keyboard.press("ArrowRight");
+    await expect(win.locator(".flashy-count")).toHaveText("3 / 6");
+    await expect(win.locator(`${card} .flashy-term`)).toContainText("The Moon always shows Earth the same face.");
+    await expect(win.locator(`${card} .flashy-term`)).toContainText("Why?");
+    await win.locator(card).click();
+    await expect(win.locator(`${card} .flashy-scroll`)).toContainText("about 27 days");
+});
+
+test("a folder of notes that are one card each is one deck with one summary note", async ({ obsidian, win }) => {
+    await obsidian.openFile("Study.md", { mode: "preview" });
+    const rows = win.locator(".markdown-reading-view .flashy-deck-row");
+    await expect(rows).toHaveCount(7);
+    const wildlife = rows.filter({ hasText: "Wildlife - Animals" });
+    await expect(wildlife.locator(".flashy-deck-meta")).toHaveText("0 of 5 learned, 5 new");
+    await wildlife.click();
+    await expect(win.locator(".flashy-title")).toHaveText("Wildlife - Animals");
+    await win.getByRole("button", { name: "Study 5" }).click();
+    await expect(win.locator(`${card} .flashy-term`)).toHaveText("Camel");
+    await win.locator(card).click();
+    // The heading that repeats the note's name is left out of the answer.
+    await expect(win.locator(`${card} .flashy-scroll`)).toContainText("A camel stores fat");
+    await expect(win.locator(`${card} .flashy-scroll h1`)).toHaveCount(0);
+    for (let i = 1; i <= 5; i++) {
+        await expect(win.locator(".flashy-count")).toHaveText(`${i} / 5`);
+        if (i === 4) await expect(win.locator(`${card} .flashy-term`)).toHaveText("Why does an octopus have three hearts?");
+        await win.keyboard.press("ArrowRight");
+    }
+    await expect(win.locator(".flashy-done")).toBeVisible();
+    await win.getByRole("button", { name: "Close" }).first().click();
+    await expect(wildlife.locator(".flashy-deck-meta")).toHaveText("5 of 5 learned, 0 new");
+    const summary = await obsidian.evaluate((app: App) => {
+        const f = app.vault.getFileByPath("Flashy/Wildlife - Animals (notes).md");
+        const fm = f ? app.metadataCache.getFileCache(f)?.frontmatter : undefined;
+        return { deck: fm?.["flashy-deck"], total: fm?.["flashy-total"], perNote: app.vault.getFileByPath("Flashy/Camel.md") !== null };
+    });
+    expect(summary).toEqual({ deck: "Decks/Wildlife - Animals", total: 5, perNote: false });
+});
+
+test.describe("two notes with the same name", () => {
+    test.use({ seed: { files: { "Dupes.md": "```flashy\nfolder: Edge cases\n```\n" } } });
+
+    test("are two cards, each named with its folder", async ({ obsidian, win }) => {
+        await obsidian.openFile("Dupes.md", { mode: "preview" });
+        const rows = win.locator(".markdown-reading-view .flashy-deck-row");
+        await rows.filter({ hasText: "Notes A" }).click();
+        await win.getByRole("button", { name: "Study 1" }).click();
+        await expect(win.locator(`${card} .flashy-term`)).toHaveText("Introduction (Notes A)");
+        await win.getByRole("button", { name: "Close" }).first().click();
+        await rows.filter({ hasText: "Notes B" }).click();
+        await win.getByRole("button", { name: "Study 1" }).click();
+        await expect(win.locator(`${card} .flashy-term`)).toHaveText("Introduction (Notes B)");
+    });
 });
 
 test("pasted text from Quizlet becomes a deck note", async ({ obsidian, win }) => {
@@ -478,7 +541,7 @@ test.describe("a vault in use", () => {
     test("the seeded history shows learned, due and new cards in every deck", async ({ obsidian, win }) => {
         await obsidian.openFile("Study.md", { mode: "preview" });
         const rows = win.locator(".markdown-reading-view .flashy-deck-row");
-        await expect(rows).toHaveCount(5);
+        await expect(rows).toHaveCount(7);
         // Spanish: cards 1 and 6 new, 2 and 7 missed yesterday, the other six learned.
         await expect(rows.nth(4).locator(".flashy-deck-meta")).toHaveText("6 of 10 learned, 2 new");
         await rows.nth(4).click();

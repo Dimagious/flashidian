@@ -24,7 +24,21 @@ Add `flashy: true` to the properties of a note and Flashy finds the cards in it,
 - **Tables**: every row of a table with two or more columns; the first cell is the front.
 - **Lists**: top-level items like `term - definition`, `term: definition` or `**term** definition`.
 
-A note uses one shape: headings if it has any, otherwise tables, otherwise lists. To pick one, set `flashy: headings`, `flashy: table` or `flashy: list`. A card that two notes share (a glossary and a deck made from it) is reviewed once.
+- **Question callouts** (`flashy: callouts`): every `> [!question] Front` callout is a card, its body the answer. For a question longer than a title, put the answer in a nested callout:
+
+  ```markdown
+  > [!question]
+  > The Moon always shows Earth the same face.
+  > Why?
+  > > [!answer]-
+  > > It turns once on its axis in the time it takes to go around Earth.
+  ```
+
+  Other callouts in the note stay notes.
+
+A note uses one shape: headings if it has any, otherwise tables, otherwise lists, otherwise question callouts. To pick one, set `flashy: headings`, `flashy: table`, `flashy: list` or `flashy: callouts`.
+
+**A note as one card**: with `flashy: note` the whole note is one card: its name on the front (or the `flashy-prompt` property, for a question), everything below as the answer. Notes like this in one folder make one deck, named after the folder. Two notes with the same name get their folder on the front. A card that two notes share (a glossary and a deck made from it) is reviewed once.
 
 **Paste a deck**: the command *Create a deck from pasted text* takes terms and definitions copied from Quizlet (Export), a spreadsheet, a CSV file or a list, and writes a deck note next to the open note.
 
@@ -33,7 +47,7 @@ A note uses one shape: headings if it has any, otherwise tables, otherwise lists
 Flashy never writes into the notes with your cards. Progress lives in plain Markdown files in a `Flashy/` folder of your vault (the folder can be changed in settings), so it syncs with Obsidian Sync, iCloud or anything else that syncs notes, and survives reinstalling the plugin:
 
 - `Flashy/log-<device>.md`: each phone or computer appends its reviews to its own log and never touches another's, so two devices cannot produce a sync conflict. Every device replays all logs.
-- `Flashy/<deck>.md`: one note per deck with its numbers as properties (`flashy-total`, `flashy-new`, `flashy-due`, `flashy-learned`, `flashy-learning`), for Bases or any other tool that reads properties.
+- `Flashy/<deck>.md`: one note per deck (`Flashy/<folder> (notes).md` for a folder of one-card notes) with its numbers as properties (`flashy-total`, `flashy-new`, `flashy-due`, `flashy-learned`, `flashy-learning`), for Bases or any other tool that reads properties.
 
 Moving or renaming a deck keeps its progress: a card is recognised by its text, not by its file. If you edit the front of a card, its history follows the answer.
 

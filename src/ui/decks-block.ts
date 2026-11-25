@@ -52,10 +52,11 @@ export class DecksBlock extends MarkdownRenderChild {
         const notes = this.source.notesIn(folder);
         await this.source.reload();
         const all = await this.source.build(notes);
-        const decks: { file: TFile; progress: DeckProgress }[] = [];
-        for (const file of notes) {
-            const p = await this.source.build([file]);
-            if (p) decks.push({ file, progress: p });
+        // One row per deck: a note, or a folder of notes that are one card each.
+        const decks: { name: string; progress: DeckProgress }[] = [];
+        for (const deck of all?.decks ?? []) {
+            const p = await this.source.build(deck.files);
+            if (p) decks.push({ name: deck.name, progress: p });
         }
         if (mine !== this.generation) return;
         el.empty();
@@ -64,7 +65,7 @@ export class DecksBlock extends MarkdownRenderChild {
             return;
         }
         if (decks.length > 1) this.row(el, t.allDecks, all, true);
-        for (const d of decks) this.row(el, d.file.basename, d.progress, false);
+        for (const d of decks) this.row(el, d.name, d.progress, false);
     }
 
     private row(parent: HTMLElement, name: string, progress: DeckProgress, isAll: boolean): void {

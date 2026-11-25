@@ -17,6 +17,19 @@ export interface DeckCard {
     state?: CardState;
 }
 
+/**
+ * What a summary note and a row of the deck list stand for: one note with its cards, or a folder of notes that are one
+ * card each (`flashy: note`), so two hundred atomic notes make one deck, not two hundred.
+ */
+export interface Deck {
+    name: string;
+    files: TFile[];
+    /** The note of a one-note deck; absent for a folder of note-cards. */
+    note?: TFile;
+    /** The folder of a deck of note-cards, `""` for the vault root. */
+    folder?: string;
+}
+
 /** The cards of one review (a note or a folder) bound to the progress store. */
 export class DeckProgress {
     private newToday = 0;
@@ -25,7 +38,7 @@ export class DeckProgress {
 
     constructor(
         readonly items: DeckCard[],
-        private readonly files: TFile[],
+        readonly decks: Deck[],
         private readonly store: ProgressStore,
         private readonly newPerDay: () => number,
     ) {
@@ -79,17 +92,17 @@ export class DeckProgress {
         this.store.unrecord(item.state?.key ?? item.id.key);
     }
 
-    /** The one note a match best time belongs to; a review of several notes keeps none. */
-    private matchDeck(): TFile | undefined {
-        return this.files.length === 1 ? this.files[0] : undefined;
+    /** The one deck a match best time belongs to; a review of several decks keeps none. */
+    private matchDeck(): Deck | undefined {
+        return this.decks.length === 1 ? this.decks[0] : undefined;
     }
 
-    /** True when this review is one note, so a match game has a best time to beat. */
+    /** True when this review is one deck, so a match game has a best time to beat. */
     hasMatchDeck(): boolean {
         return this.matchDeck() !== undefined;
     }
 
-    /** The best match time of this deck in seconds, or none (no game yet, or a review of several notes). */
+    /** The best match time of this deck in seconds, or none (no game yet, or a review of several decks). */
     matchBest(): number | undefined {
         const deck = this.matchDeck();
         if (!deck) return undefined;
@@ -111,9 +124,10 @@ export class DeckProgress {
         await this.store.flush();
         this.refresh();
         const now = new Date();
-        for (const file of this.files) {
-            const own = this.items.filter((i) => i.path === file.path);
-            if (own.length) await this.store.writeSummary(file, stats(own.map((i) => i.state), now));
+        for (const deck of this.decks) {
+            const paths = new Set(deck.files.map((f) => f.path));
+            const own = this.items.filter((i) => paths.has(i.path));
+            if (own.length) await this.store.writeSummary(deck, stats(own.map((i) => i.state), now));
         }
     }
 }

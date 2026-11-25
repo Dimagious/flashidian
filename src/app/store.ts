@@ -1,6 +1,7 @@
 import { type App, normalizePath, type TFile } from "obsidian";
 import { appendLog, type Entry, merge, newLog, parseLog } from "../core/log";
 import { readBest } from "../core/match";
+import type { Deck } from "./progress";
 import { type CardState, replay, type Stats } from "../core/schedule";
 
 const DEVICE_KEY = "flashy-device";
@@ -97,11 +98,10 @@ export class ProgressStore {
      * loses nothing, the next review writes it again from the logs. The one exception is the match best time kept next
      * to them: a conflict can lose it, which a game score can afford.
      */
-    async writeSummary(deck: TFile, s: Stats): Promise<void> {
-        const path = this.summaryPath(deck);
+    async writeSummary(deck: Deck, s: Stats): Promise<void> {
         const file = await this.summaryFile(deck);
         await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
-            fm["flashy-deck"] = this.app.fileManager.generateMarkdownLink(deck, path);
+            fm["flashy-deck"] = this.deckLink(deck);
             fm["flashy-total"] = s.total;
             fm["flashy-new"] = s.fresh;
             fm["flashy-due"] = s.due;
@@ -114,31 +114,37 @@ export class ProgressStore {
      * The best time of the match game for a deck, in seconds, kept in the same summary note. `writeSummary` sets only
      * its own keys, so the best time survives every review.
      */
-    matchBest(deck: TFile): number | undefined {
+    matchBest(deck: Deck): number | undefined {
         const file = this.app.vault.getFileByPath(this.summaryPath(deck));
         return file ? readBest(this.app.metadataCache.getFileCache(file)?.frontmatter?.[MATCH_BEST]) : undefined;
     }
 
-    async writeMatchBest(deck: TFile, seconds: number): Promise<void> {
+    async writeMatchBest(deck: Deck, seconds: number): Promise<void> {
         const file = await this.summaryFile(deck);
         await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
             fm[MATCH_BEST] = seconds;
         });
     }
 
-    private summaryPath(deck: TFile): string {
-        return normalizePath(`${this.dir()}/${deck.basename}.md`);
+    /**
+     * `Flashy/<note>.md` for a note, `Flashy/<folder> (notes).md` for a folder of note-cards: a folder note such as
+     * `Biology/Biology.md` keeps its own summary.
+     */
+    private summaryPath(deck: Deck): string {
+        return normalizePath(`${this.dir()}/${deck.note ? deck.note.basename : `${deck.name} (notes)`}.md`);
     }
 
-    private async summaryFile(deck: TFile): Promise<TFile> {
+    /** A link to a note, the path of a folder (a folder cannot be linked). */
+    private deckLink(deck: Deck): string {
+        return deck.note ? this.app.fileManager.generateMarkdownLink(deck.note, this.summaryPath(deck)) : `${deck.folder || "/"}`;
+    }
+
+    private async summaryFile(deck: Deck): Promise<TFile> {
         await this.ensureFolder();
         const path = this.summaryPath(deck);
         return (
             this.app.vault.getFileByPath(path) ??
-            (await this.app.vault.create(
-                path,
-                `%% Flashy progress of ${this.app.fileManager.generateMarkdownLink(deck, path)}. Flashy rewrites these properties after every review. %%\n`,
-            ))
+            (await this.app.vault.create(path, `%% Flashy progress of ${this.deckLink(deck)}. Flashy rewrites these properties after every review. %%\n`))
         );
     }
 
