@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-11-25
+
 ### Fixed
 
 - A deck of one card said "1 cards" (and "1 notes" for a folder of one note) in English, Spanish, German, French and Portuguese.
