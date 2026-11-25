@@ -12,3 +12,4 @@ out/
 .claude/hillclimb/**/trajectory/
 .claude/hillclimb/**/progress.txt
 .claude/hillclimb/**/pilot.md
+.DS_Store
