@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-25
+
 ### Added
 
 - Question callouts as cards (`flashy: callouts`): `> [!question] Front` with the answer in its body, or a longer question with the answer in a nested `> [!answer]` callout. Other callouts stay notes.
