@@ -45,7 +45,7 @@ npx opdk release patch --dry-run                                 # cut a release
 
 ## Progress storage (ADR, 2026-11-24)
 
-Decided after an architect and a marketer reviewed the options: notes with cards are never written to (SR's issue #162: users hate scheduling data in notes); `data.json` and hidden folders are out because Obsidian Sync does not sync them by default. So: a visible folder (`Flashy/`, configurable), one append-only `log-<device>.md` per device (single writer, no sync conflicts, Decks does the same), state replayed with ts-fsrs (no fuzz, no short-term steps, so every device computes the same dates), and `Flashy/<deck>.md` with derived numbers as properties (safe to lose in a conflict). Device id in `app.saveLocalStorage`, which no sync copies.
+Decided after an architect and a marketer reviewed the options: notes with cards are never written to (SR's issue #162: users hate scheduling data in notes); `data.json` and hidden folders are out because Obsidian Sync does not sync them by default. So: a visible folder (`Flashy/`, configurable), one append-only `log-<device>.md` per device (single writer, no sync conflicts, Decks does the same), state replayed with ts-fsrs (no fuzz, no short-term steps, so every device computes the same dates), and `Flashy/<deck>.md` with derived numbers as properties (safe to lose in a conflict; the one exception is the match best time, `flashy-match-best`, which a conflict can lose for good, accepted as a game score). Device id in `app.saveLocalStorage`, which no sync copies.
 
 - Card key: cyrb53 of the normalized front, `-2`, `-3` for repeats in one note; the path is not part of it. A card without history takes over an orphaned key with the same answer hash, and keeps logging under that old key (`CardState.key`).
 - Reviews are batched: flushed at the end of a round, on close and 15 s after the last grade. Undo takes back an unwritten review only.
@@ -56,6 +56,7 @@ Decided after an architect and a marketer reviewed the options: notes with cards
 
 - The quiz hides a card's term in its own answer only when the answer is a sentence (more than three words): a short answer is a name, and "Mexico City" masked as "___ City" read as a bug.
 
+- Match keeps its best time as `flashy-match-best` (seconds) in `Flashy/<deck>.md`: `writeSummary` sets only its own keys, so it survives. Only a one-note review has a best; nothing goes to the review log. Its clock redraws every 100 ms, so e2e `settle` watches `.flashy-match`, not the modal.
 - Front side (`term`, `definition`, `mixed`) lives in settings and is switched on the deck screen through `ReviewPrefs`; a definition-first card masks its term with the same rule as the quiz. Speech is the Web Speech API (`speechSynthesis`), no network: the term side takes `flashy-lang`, an answer is guessed (Cyrillic means ru, else en). Only the top card shows its speaker: stacked cards are scaled below the 44 px touch target.
 
 ## Seed vault: the base of tests and demos
@@ -67,9 +68,8 @@ Decided after an architect and a marketer reviewed the options: notes with cards
 
 ## Roadmap (agreed 2026-11-25, from a look at Quizlet's set page)
 
-Done: mode tiles, front side, read aloud (0.7.x). Next, in order:
+Done: mode tiles, front side, read aloud (0.7.x); match game (`src/core/match.ts`, fourth tile, 2x2 mode grid). Still open for match: the README GIF and a look on the iPhone. Next, in order:
 
-1. Match game: a grid of 6 terms and 6 definitions (gists, as in the quiz), tap pairs, a timer and a best time per deck. Third tile on the deck screen. Writes nothing to the review log. The README GIF.
 2. Hint before the flip: first letter and length of the answer (`s _ _ _ _`).
 3. Stars without touching notes: a star is a log entry; plus an automatic "Difficult" filter (cards sent left twice or more).
 4. Keyboard help on `?` in a round.

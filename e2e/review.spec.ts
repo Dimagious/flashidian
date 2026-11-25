@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import type { Page } from "@playwright/test";
 import type { App } from "obsidian";
 import { expect, test } from "./fixtures";
 import { demoHistory } from "./history";
@@ -91,11 +92,11 @@ test("a scheduled round: deck screen, flip, swipes, undo, then the log and the d
     expect(deck).toBe(readFileSync(`e2e-vault.pristine/${SPANISH}`, "utf8"));
 });
 
-test("the deck screen: three modes, and the front side it remembers; definition first hides the term", async ({ obsidian, win }) => {
+test("the deck screen: four modes, and the front side it remembers; definition first hides the term", async ({ obsidian, win }) => {
     await obsidian.openFile(SPANISH, { mode: "preview" });
     await obsidian.runCommand("flashidian:review-note");
-    await expect(win.locator(".flashy-mode .flashy-mode-label")).toHaveText(["Cards", "Quiz", "Reverse"]);
-    await expect(win.locator(".flashy-mode .flashy-mode-n")).toHaveText(["10", "10", "10"]);
+    await expect(win.locator(".flashy-mode .flashy-mode-label")).toHaveText(["Cards", "Quiz", "Reverse", "Match"]);
+    await expect(win.locator(".flashy-mode .flashy-mode-n")).toHaveText(["10", "10", "10", "6"]);
     await expect(win.getByRole("radio", { name: "Term" })).toHaveAttribute("aria-checked", "true");
 
     await win.getByRole("radio", { name: "Definition" }).click();
@@ -361,6 +362,114 @@ test("the quiz fits the phone", async ({ obsidian, win }) => {
     await win.locator(".flashy-quiz-option").first().click();
     await win.waitForTimeout(450);
     await win.screenshot({ path: ".e2e/phone-quiz.png" });
+});
+
+const CAPITAL: Record<string, string> = {
+    France: "Paris", Japan: "Tokyo", Brazil: "Brasília", Australia: "Canberra", Canada: "Ottawa",
+    Egypt: "Cairo", Kenya: "Nairobi", Italy: "Rome", Mexico: "Mexico City", Turkey: "Ankara",
+};
+
+/** Plays one match game on the capitals: one wrong pair first, then every pair right. */
+async function playCapitals(win: Page, miss: boolean): Promise<void> {
+    const terms = win.locator(".flashy-match-tile.is-term:not(.is-matched)");
+    const defs = win.locator(".flashy-match-tile.is-definition");
+    await expect(win.locator(".flashy-match-tile")).toHaveCount(12);
+    const countries = (await terms.allTextContents()).map((t) => t.trim());
+    expect(countries).toHaveLength(6);
+    if (miss) {
+        const [a, b] = countries;
+        await terms.filter({ hasText: new RegExp(`^${a}$`) }).click();
+        await expect(win.locator(".flashy-match-tile.is-selected")).toHaveCount(1);
+        await defs.filter({ hasText: new RegExp(`^${CAPITAL[b ?? ""]}$`) }).click();
+        await expect(win.locator(".flashy-pill.is-repeat .flashy-n")).toHaveText("1");
+        await expect(win.locator(".flashy-match-tile.is-selected")).toHaveCount(0);
+    }
+    for (const [i, country] of countries.entries()) {
+        await win.locator(".flashy-match-tile.is-term").filter({ hasText: new RegExp(`^${country}$`) }).click();
+        await defs.filter({ hasText: new RegExp(`^${CAPITAL[country]}$`) }).click();
+        if (i < 5) await expect(win.locator(".flashy-pill.is-keep .flashy-n")).toHaveText(String(i + 1));
+    }
+}
+
+test("a match game: tap pairs against the clock, a miss counts, the best time lands in the deck's summary note", async ({ obsidian, win }) => {
+    await obsidian.openFile(CAPITALS, { mode: "preview" });
+    await obsidian.runCommand("flashidian:review-note");
+    await win.getByRole("button", { name: "Match: 6 pairs" }).click();
+    await expect(win.locator(".flashy-count")).toHaveText(/^\d+\.\d s$/);
+    // Tapping the picked tile again drops it.
+    const first = win.locator(".flashy-match-tile.is-term").first();
+    await first.click();
+    await expect(first).toHaveClass(/is-selected/);
+    await first.click();
+    await expect(first).not.toHaveClass(/is-selected/);
+
+    await playCapitals(win, true);
+    await expect(win.locator(".flashy-done h2")).toHaveText("New best time");
+    await expect(win.locator(".flashy-match-summary")).toHaveText("1 miss");
+    const shown = (await win.locator(".flashy-match-time").textContent()) ?? "";
+    const seconds = Number(shown.replace(" s", ""));
+    expect(seconds).toBeGreaterThan(0);
+    await expect
+        .poll(() =>
+            obsidian.evaluate((app: App) => {
+                const f = app.vault.getFileByPath("Flashy/Geography - Capitals.md");
+                return f ? app.metadataCache.getFileCache(f)?.frontmatter?.["flashy-match-best"] : undefined;
+            }),
+        )
+        .toBe(seconds);
+
+    // Another game deals a new grid; the match writes nothing to the review log.
+    await win.getByRole("button", { name: "Play again" }).click();
+    await expect(win.locator(".flashy-match-tile")).toHaveCount(12);
+    await expect(win.locator(".flashy-pill.is-keep .flashy-n")).toHaveText("0");
+    await win.getByRole("button", { name: "Close" }).first().click();
+    expect(await obsidian.evaluate((app: App) => app.vault.getFiles().some((f) => f.path.startsWith("Flashy/log-")))).toBe(false);
+});
+
+test.describe("a match best time to beat", () => {
+    test.use({ seed: { files: { "Flashy/Geography - Capitals.md": "---\nflashy-match-best: 0.1\n---\n" } } });
+
+    // 0.1 s cannot be beaten: a new best must be at least a tenth faster.
+    test("a slower game keeps the best time and names it", async ({ obsidian, win }) => {
+        await obsidian.openFile(CAPITALS, { mode: "preview" });
+        await obsidian.runCommand("flashidian:review-note");
+        await win.getByRole("button", { name: "Match: 6 pairs" }).click();
+        await playCapitals(win, false);
+        await expect(win.locator(".flashy-done h2")).toHaveText("All pairs matched");
+        await expect(win.locator(".flashy-match-summary")).toHaveText("0 misses · Best time: 0.1 s");
+        const best = await obsidian.evaluate((app: App) => {
+            const f = app.vault.getFileByPath("Flashy/Geography - Capitals.md");
+            return f ? app.metadataCache.getFileCache(f)?.frontmatter?.["flashy-match-best"] : undefined;
+        });
+        expect(best).toBe(0.1);
+    });
+});
+
+test("the match game fits the phone, with the longest definitions", async ({ obsidian, win }) => {
+    await obsidian.mobile();
+    await obsidian.openFile("Decks/Biology - The Cell.md", { mode: "preview" });
+    await obsidian.runCommand("flashidian:review-note");
+    await obsidian.settle({ root: ".flashy-modal" });
+    await obsidian.checkLayout({ root: ".flashy-modal" });
+    await win.screenshot({ path: ".e2e/phone-deck-modes.png" });
+    await win.getByRole("button", { name: "Match: 6 pairs" }).click();
+    // The clock redraws every 100 ms, so only the grid can go quiet.
+    await obsidian.settle({ root: ".flashy-match" });
+    await obsidian.checkLayout({ root: ".flashy-modal" });
+    await win.locator(".flashy-match-tile.is-term").first().click();
+    await win.screenshot({ path: ".e2e/phone-match.png" });
+});
+
+test("the match end screen fits the phone", async ({ obsidian, win }) => {
+    await obsidian.mobile();
+    await obsidian.openFile(CAPITALS, { mode: "preview" });
+    await obsidian.runCommand("flashidian:review-note");
+    await win.getByRole("button", { name: "Match: 6 pairs" }).click();
+    await playCapitals(win, true);
+    await expect(win.locator(".flashy-done h2")).toHaveText("New best time");
+    await obsidian.settle({ root: ".flashy-modal" });
+    await obsidian.checkLayout({ root: ".flashy-modal" });
+    await win.screenshot({ path: ".e2e/phone-match-done.png" });
 });
 
 test.describe("a vault in use", () => {

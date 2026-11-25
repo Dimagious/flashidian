@@ -1,10 +1,13 @@
 import { type App, normalizePath, type TFile } from "obsidian";
 import { appendLog, type Entry, merge, newLog, parseLog } from "../core/log";
+import { readBest } from "../core/match";
 import { type CardState, replay, type Stats } from "../core/schedule";
 
 const DEVICE_KEY = "flashy-device";
 /** Reviews are written in batches: at the end of a round, on close, and this long after the last grade. */
 const FLUSH_DELAY_MS = 15_000;
+/** The summary note property with the match game's best time. */
+const MATCH_BEST = "flashy-match-best";
 
 /**
  * Review progress in the vault. Each device appends to its own `<folder>/log-<device>.md` and reads everyone's.
@@ -91,18 +94,12 @@ export class ProgressStore {
 
     /**
      * One note per deck with its numbers as properties, for Bases, Dataview or Dashy. Derived data: a conflict in it
-     * loses nothing, the next review writes it again from the logs.
+     * loses nothing, the next review writes it again from the logs. The one exception is the match best time kept next
+     * to them: a conflict can lose it, which a game score can afford.
      */
     async writeSummary(deck: TFile, s: Stats): Promise<void> {
-        await this.ensureFolder();
-        const path = normalizePath(`${this.dir()}/${deck.basename}.md`);
-        let file = this.app.vault.getFileByPath(path);
-        if (!file) {
-            file = await this.app.vault.create(
-                path,
-                `%% Flashy progress of ${this.app.fileManager.generateMarkdownLink(deck, path)}. Flashy rewrites these properties after every review. %%\n`,
-            );
-        }
+        const path = this.summaryPath(deck);
+        const file = await this.summaryFile(deck);
         await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
             fm["flashy-deck"] = this.app.fileManager.generateMarkdownLink(deck, path);
             fm["flashy-total"] = s.total;
@@ -111,6 +108,38 @@ export class ProgressStore {
             fm["flashy-learned"] = s.learned;
             fm["flashy-learning"] = s.learning;
         });
+    }
+
+    /**
+     * The best time of the match game for a deck, in seconds, kept in the same summary note. `writeSummary` sets only
+     * its own keys, so the best time survives every review.
+     */
+    matchBest(deck: TFile): number | undefined {
+        const file = this.app.vault.getFileByPath(this.summaryPath(deck));
+        return file ? readBest(this.app.metadataCache.getFileCache(file)?.frontmatter?.[MATCH_BEST]) : undefined;
+    }
+
+    async writeMatchBest(deck: TFile, seconds: number): Promise<void> {
+        const file = await this.summaryFile(deck);
+        await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
+            fm[MATCH_BEST] = seconds;
+        });
+    }
+
+    private summaryPath(deck: TFile): string {
+        return normalizePath(`${this.dir()}/${deck.basename}.md`);
+    }
+
+    private async summaryFile(deck: TFile): Promise<TFile> {
+        await this.ensureFolder();
+        const path = this.summaryPath(deck);
+        return (
+            this.app.vault.getFileByPath(path) ??
+            (await this.app.vault.create(
+                path,
+                `%% Flashy progress of ${this.app.fileManager.generateMarkdownLink(deck, path)}. Flashy rewrites these properties after every review. %%\n`,
+            ))
+        );
     }
 
     private async ensureFolder(): Promise<void> {

@@ -1,5 +1,6 @@
 import type { TFile } from "obsidian";
 import type { CardId } from "../core/key";
+import { isNewBest, toSeconds } from "../core/match";
 import type { Card } from "../core/parse";
 import { attach, type CardState, startedToday, type Stats, stats, todayQueue } from "../core/schedule";
 import type { Grade } from "../core/session";
@@ -19,6 +20,8 @@ export interface DeckCard {
 /** The cards of one review (a note or a folder) bound to the progress store. */
 export class DeckProgress {
     private newToday = 0;
+    /** The best match time set in this session: right after a write the metadata cache can still serve the old one. */
+    private best: number | undefined;
 
     constructor(
         readonly items: DeckCard[],
@@ -74,6 +77,33 @@ export class DeckProgress {
 
     unrecord(item: DeckCard): void {
         this.store.unrecord(item.state?.key ?? item.id.key);
+    }
+
+    /** The one note a match best time belongs to; a review of several notes keeps none. */
+    private matchDeck(): TFile | undefined {
+        return this.files.length === 1 ? this.files[0] : undefined;
+    }
+
+    /** True when this review is one note, so a match game has a best time to beat. */
+    hasMatchDeck(): boolean {
+        return this.matchDeck() !== undefined;
+    }
+
+    /** The best match time of this deck in seconds, or none (no game yet, or a review of several notes). */
+    matchBest(): number | undefined {
+        const deck = this.matchDeck();
+        if (!deck) return undefined;
+        const saved = this.store.matchBest(deck);
+        return saved === undefined || (this.best !== undefined && this.best < saved) ? this.best : saved;
+    }
+
+    /** Keeps a finished game's time when it beats the best; returns whether it did. */
+    async finishMatch(ms: number): Promise<boolean> {
+        const deck = this.matchDeck();
+        if (!deck || !isNewBest(this.matchBest(), ms)) return false;
+        this.best = toSeconds(ms);
+        await this.store.writeMatchBest(deck, this.best);
+        return true;
     }
 
     /** Writes the reviews, then each deck's numbers. */

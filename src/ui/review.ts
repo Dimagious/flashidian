@@ -1,5 +1,6 @@
 import { type App, Component, getLanguage, MarkdownRenderer, Modal, Notice, setIcon } from "obsidian";
 import type { DeckCard, DeckProgress } from "../app/progress";
+import { buildMatch, formatTime, isNewBest, tap, type Tile } from "../core/match";
 import { buildQuiz, type Question } from "../core/quiz";
 import { answerAsFront, answerFirst, pickVoice, SIDES, type Side, speechLang, speechLocale, speechText } from "../core/side";
 import { type Grade, Session, shuffle } from "../core/session";
@@ -10,6 +11,12 @@ const STACK = 3;
 const QUIZ_SIZE = 20;
 /** After a right answer the next question comes on its own after this long. */
 const QUIZ_NEXT_MS = 750;
+/** A wrong pair stays red this long. */
+const MATCH_MISS_MS = 450;
+/** A term with a word longer than this gets the smaller font on a tile. */
+const LONG_WORD = 10;
+/** How often the match clock redraws. */
+const MATCH_TICK_MS = 100;
 /** Share of the card width a drag must pass to count as a grade. */
 const THRESHOLD = 0.32;
 /** Spring constants per millisecond: about a 0.4 s period, a little overshoot. */
@@ -55,6 +62,8 @@ export class ReviewModal extends Modal {
     private actionBtns: HTMLButtonElement[] = [];
     private quiz: { questions: Question<DeckCard>[]; reverse: boolean; index: number; right: number; wrong: DeckCard[]; answered: boolean } | null = null;
     private quizTimer: number | null = null;
+    private match: { tiles: Tile<DeckCard>[]; buttons: HTMLButtonElement[]; selected: number | null; matched: number; misses: number; started: number } | null = null;
+    private matchClock: number | null = null;
     private legend!: HTMLElement;
     /** Cards of this round that show their answer first (all of them, none, or a coin per card). */
     private answerFirst = new Set<DeckCard>();
@@ -76,14 +85,14 @@ export class ReviewModal extends Modal {
         this.modalEl.setAttr("data-ignore-swipe", "true");
         this.build();
         const inRound = (): boolean => this.root.hasClass("is-round");
-        const inCards = (): boolean => inRound() && !this.quiz;
+        const inCards = (): boolean => inRound() && !this.quiz && !this.match;
         this.scope.register([], "ArrowRight", () => (inCards() && this.fling(1), false));
         this.scope.register([], "ArrowLeft", () => (inCards() && this.fling(-1), false));
         this.scope.register([], " ", () => (inCards() && this.flip(), false));
         this.scope.register([], "ArrowUp", () => (inCards() && this.flip(), false));
         this.scope.register([], "ArrowDown", () => (inCards() && this.flip(), false));
         this.scope.register([], "s", () => (inCards() && this.speakTop(), false));
-        this.scope.register([], "Backspace", () => (inRound() && !this.quiz && this.undo(), false));
+        this.scope.register([], "Backspace", () => (inCards() && this.undo(), false));
         for (const n of ["1", "2", "3", "4"]) this.scope.register([], n, () => (this.quiz && this.pick(Number(n) - 1), false));
         this.scope.register([], "Enter", () => (this.quiz?.answered && this.nextQuestion(), false));
         this.showDeck();
@@ -92,6 +101,7 @@ export class ReviewModal extends Modal {
     onClose(): void {
         this.synth?.cancel();
         if (this.quizTimer !== null) window.clearTimeout(this.quizTimer);
+        this.stopMatchClock();
         const item = this.session.peek();
         if (this.flying && item && this.kind === "scheduled") this.progress.record(item, this.flying);
         this.flying = null;
@@ -159,12 +169,15 @@ export class ReviewModal extends Modal {
     }
 
     private clearStage(): void {
-        for (const el of Array.from(this.stage.querySelectorAll(".flashy-card, .flashy-done, .flashy-home, .flashy-quiz"))) el.remove();
+        for (const el of Array.from(this.stage.querySelectorAll(".flashy-card, .flashy-done, .flashy-home, .flashy-quiz, .flashy-match"))) el.remove();
         this.nodes.clear();
         if (this.quizTimer !== null) window.clearTimeout(this.quizTimer);
         this.quizTimer = null;
         this.quiz = null;
         this.root.removeClass("is-quiz");
+        this.stopMatchClock();
+        this.match = null;
+        this.root.removeClass("is-match");
     }
 
     // ---------- deck screen ----------
@@ -206,6 +219,8 @@ export class ReviewModal extends Modal {
         const reverse = quiz.length ? this.makeQuiz(this.progress.items, true) : [];
         if (reverse.length)
             mode("arrow-left-right", this.t.modeReverse, reverse.length, this.t.quizReverseStart(reverse.length), () => this.startQuiz(reverse, true));
+        const pairs = this.newMatch().length / 2;
+        if (pairs) mode("layout-grid", this.t.modeMatch, pairs, this.t.matchStart(pairs), () => this.startMatch());
 
         // The side a card shows first, for studying and for going through every card.
         const side = home.createDiv({ cls: "flashy-side" });
@@ -336,6 +351,114 @@ export class ReviewModal extends Modal {
         activeWindow.requestAnimationFrame(() =>
             activeWindow.requestAnimationFrame(() => val.setCssProps({ "--flashy-share": String(n ? q.right / n : 0) })),
         );
+    }
+
+    // ---------- match ----------
+
+    /** A fresh game: up to six random cards of this review, as shuffled term and definition tiles. */
+    private newMatch(): Tile<DeckCard>[] {
+        return buildMatch(this.progress.items, (c) => c.card.front, (c) => c.card.back);
+    }
+
+    private startMatch(): void {
+        const tiles = this.newMatch();
+        if (!tiles.length) return this.showDeck();
+        this.clearStage();
+        this.root.addClass("is-round");
+        this.root.addClass("is-match");
+        const view = this.stage.createDiv({ cls: "flashy-match" });
+        view.createDiv({ cls: "flashy-deck flashy-match-hint", text: this.t.matchHint });
+        const grid = view.createDiv({ cls: "flashy-match-grid" });
+        const buttons = tiles.map((tile, i) => {
+            // A term with a long word gets a smaller font so the word stays whole on a phone.
+            const long = tile.side === "term" && tile.label.split(/\s+/).some((w) => w.length > LONG_WORD);
+            const b = grid.createEl("button", { cls: `flashy-match-tile is-${tile.side}${long ? " is-long" : ""}` });
+            // A span, not bare text: a flex item would not wrap a long word.
+            b.createSpan({ cls: "flashy-match-label", text: tile.label });
+            b.addEventListener("click", () => this.tapTile(i));
+            return b;
+        });
+        this.match = { tiles, buttons, selected: null, matched: 0, misses: 0, started: performance.now() };
+        this.matchHud();
+        this.matchClock = window.setInterval(() => this.matchHud(), MATCH_TICK_MS);
+    }
+
+    private stopMatchClock(): void {
+        if (this.matchClock !== null) window.clearInterval(this.matchClock);
+        this.matchClock = null;
+    }
+
+    /** The clock in the middle, matched pairs on the right, misses on the left. */
+    private matchHud(): void {
+        const m = this.match;
+        if (!m) return;
+        const pairs = m.tiles.length / 2;
+        this.countEl.setText(this.t.matchTime(formatTime(performance.now() - m.started)));
+        this.barEl.setCssProps({ "--flashy-progress": `${(m.matched / pairs) * 100}%` });
+        this.repeatEl.querySelector(".flashy-n")?.setText(String(m.misses));
+        this.keepEl.querySelector(".flashy-n")?.setText(String(m.matched));
+    }
+
+    private tapTile(i: number): void {
+        const m = this.match;
+        const b = m?.buttons[i];
+        if (!m || !b || b.hasClass("is-matched")) return;
+        const prev = m.selected === null ? undefined : m.buttons[m.selected];
+        const result = tap(m.tiles, m.selected, i);
+        prev?.removeClass("is-selected");
+        if (result === "select") {
+            b.addClass("is-selected");
+            m.selected = i;
+            return;
+        }
+        m.selected = null;
+        if (result === "deselect" || !prev) return;
+        if (result === "match") {
+            for (const el of [prev, b]) {
+                el.addClass("is-matched");
+                el.disabled = true;
+            }
+            m.matched++;
+            this.bump(this.keepEl);
+        } else {
+            for (const el of [prev, b]) {
+                el.removeClass("is-wrong");
+                void el.offsetWidth;
+                el.addClass("is-wrong");
+            }
+            window.setTimeout(() => [prev, b].forEach((el) => el.removeClass("is-wrong")), this.reduceMotion ? 0 : MATCH_MISS_MS);
+            m.misses++;
+            this.bump(this.repeatEl);
+        }
+        this.matchHud();
+        if (m.matched === m.tiles.length / 2) this.finishMatch();
+    }
+
+    private finishMatch(): void {
+        const m = this.match;
+        if (!m) return;
+        this.stopMatchClock();
+        const ms = performance.now() - m.started;
+        this.countEl.setText(this.t.matchTime(formatTime(ms)));
+        const best = this.progress.matchBest();
+        const isNew = this.progress.hasMatchDeck() && isNewBest(best, ms);
+        this.stage.querySelector(".flashy-match")?.remove();
+        const done = this.stage.createDiv({ cls: "flashy-done" });
+        done.createDiv({ cls: "flashy-match-time", text: this.t.matchTime(formatTime(ms)) });
+        done.createEl("h2", { text: isNew ? this.t.matchNewBest : this.t.matchDone });
+        const line = [this.t.matchMisses(m.misses)];
+        if (!isNew && best !== undefined) line.push(this.t.matchBest(best.toFixed(1)));
+        done.createEl("p", { cls: "flashy-match-summary", text: line.join(" · ") });
+        done.createDiv({ cls: "flashy-home-note", text: this.t.matchNote });
+        const acts = done.createDiv({ cls: "flashy-acts" });
+        acts.createEl("button", { cls: "mod-cta", text: this.t.matchAgain }).addEventListener("click", () => this.startMatch());
+        acts.createEl("button", { text: this.t.toDeck }).addEventListener("click", () => this.showDeck());
+        if (isNew) {
+            this.progress.finishMatch(ms).catch((e: unknown) => {
+                console.error("Flashy: saving the match best time failed", e);
+                new Notice(this.t.matchSaveFailed(e instanceof Error ? e.message : String(e)));
+            });
+        }
     }
 
     // ---------- round ----------

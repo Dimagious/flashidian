@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { cardIds } from "./key";
 import { type Card, parseCards } from "./parse";
 import { parsePasted } from "./paste";
+import { buildMatch, MATCH_PAIRS } from "./match";
 import { buildQuiz, plainTerm } from "./quiz";
 import { modeOf, parseStructured } from "./structured";
 
@@ -38,6 +39,16 @@ describe("seed vault", () => {
                 if (shown.split(/\s+/).length > 3) expect(shown.toLowerCase()).not.toContain(term);
                 expect(shown).not.toMatch(/^___ \S+$/);
             }
+        }
+    });
+
+    it.each(DECKS)("%s makes a full match game of short tiles that never name their own term", (path) => {
+        const tiles = buildMatch(deck(path), (c) => c.front, (c) => c.back);
+        expect(tiles).toHaveLength(MATCH_PAIRS * 2);
+        for (const t of tiles.filter((x) => x.side === "definition")) {
+            expect(t.label.length).toBeLessThanOrEqual(81);
+            const term = plainTerm(t.item.front).toLowerCase();
+            if (t.label.split(/\s+/).length > 3) expect(t.label.toLowerCase()).not.toContain(term);
         }
     });
 

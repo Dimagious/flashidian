@@ -120,7 +120,8 @@ export function buildQuiz<T>(
     });
 }
 
-function shuffleWith<T>(items: readonly T[], random: () => number): T[] {
+/** A Fisher-Yates shuffle with an injectable random source, so tests are deterministic. */
+export function shuffleWith<T>(items: readonly T[], random: () => number): T[] {
     const a = items.slice();
     for (let i = a.length - 1; i > 0; i--) {
         const j = Math.floor(random() * (i + 1));

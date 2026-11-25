@@ -49,6 +49,10 @@ The deck screen also offers a quiz of up to 20 questions: Flashy shows the first
 
 The reverse quiz turns it around: the term is the question, and the options are four short definitions, each with its own term hidden so it does not give itself away.
 
+## Match
+
+Match deals six cards of the deck as twelve tiles, terms and short definitions shuffled together. Tap a term, then its definition: a right pair leaves the grid, a wrong one flashes. The clock runs until the last pair, and the best time of a deck is kept as `flashy-match-best` in its progress note. Match does not change the schedule.
+
 ## Scheduling
 
 Flashy schedules with [FSRS](https://github.com/open-spaced-repetition/ts-fsrs). Swipe right (got it) and a new card comes back in a few days, then in weeks; swipe left (again) and it comes back tomorrow. Each deck opens on a screen with today's cards, new cards and learned cards. New cards are introduced at 20 a day across all decks, a number you can change in settings.
