@@ -39,7 +39,9 @@ Moving or renaming a deck keeps its progress: a card is recognised by its text, 
 
 ## Quiz
 
-The deck screen also offers a quiz of up to 20 questions: Flashy shows the first plain paragraph of an answer (callouts, lists and tables left out, the term itself hidden as `___`) and four terms from the same review to pick from. A right pick moves on by itself, a wrong one marks the answer and waits. At the end you can retry the ones you missed. Keys 1 to 4 pick, Enter moves on. The quiz does not change the schedule: picking a term is easier than recalling it.
+The deck screen also offers a quiz of up to 20 questions: Flashy shows the first plain paragraph of an answer (callouts, lists and tables left out, the term itself hidden as `___`) and four terms from the same review to pick from. A right pick moves on by itself, a wrong one marks the answer and waits. At the end you can retry the ones you missed. Keys 1 to 4 pick, Enter moves on. The quiz does not change the schedule: picking an answer is easier than recalling it.
+
+The reverse quiz turns it around: the term is the question, and the options are four short definitions, each with its own term hidden so it does not give itself away.
 
 ## Scheduling
 

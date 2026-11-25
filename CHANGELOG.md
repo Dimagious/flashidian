@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Reverse quiz: the term is the question, four short definitions are the options, each with its own term hidden. Retrying the missed keeps the direction.
+
 ## [0.5.1] - 2026-11-24
 
 - Quiz on a phone: options read from the left and keep their green and red, which Obsidian's mobile button style covered.

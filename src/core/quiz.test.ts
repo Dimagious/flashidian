@@ -71,7 +71,7 @@ describe("buildQuiz", () => {
     const random = (): number => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 
     it("asks each usable card once with four distinct options and the right answer among them", () => {
-        const qs = buildQuiz(cards, (c) => c.f, (c) => c.b, 20, random);
+        const qs = buildQuiz(cards, (c) => c.f, (c) => c.b, 20, { random });
         expect(qs).toHaveLength(5);
         for (const q of qs) {
             const fronts = q.options.map((o) => o.f.toLowerCase());
@@ -88,5 +88,42 @@ describe("buildQuiz", () => {
         expect(buildQuiz(cards.slice(5), (c) => c.f, (c) => c.b, 20)).toEqual([]);
         const two = buildQuiz(cards.slice(0, 2), (c) => c.f, (c) => c.b, 20);
         expect(two.every((q) => q.options.length === 2)).toBe(true);
+    });
+
+    it("reverse: shows the term and offers short definitions, each with its own term hidden", () => {
+        const deck: C[] = [
+            ...cards,
+            { f: "Long", b: `Long is ${"very ".repeat(60)}long.` },
+            { f: "Twin", b: "A packaged prompt." },
+        ];
+        const qs = buildQuiz(deck, (c) => c.f, (c) => c.b, 20, { random, reverse: true });
+        expect(qs).toHaveLength(7);
+        for (const q of qs) {
+            expect(q.prompt).toBe(q.item.f);
+            expect(q.labels).toHaveLength(q.options.length);
+            expect(new Set(q.labels.map((l) => l.toLowerCase())).size).toBe(q.labels.length);
+            q.options.forEach((o, i) => {
+                expect(q.labels[i]?.length).toBeLessThanOrEqual(161);
+                if (o.f === "Long") expect(q.labels[i]).toMatch(/^___ is very/);
+            });
+            expect(q.labels[q.answer]).toBe(gist(q.item.b, 160).replace(/^Long/, "___"));
+        }
+        // Two cards with the same definition never meet in one question.
+        const skill = qs.find((q) => q.item.f === "Skill");
+        expect(skill?.options.some((o) => o.f === "Twin")).toBe(false);
+    });
+
+    it("reverse labels drop markdown", () => {
+        const deck = [
+            { f: "A", b: "Uses `auto` or *any* with [[Note|a link]] and [[Plain]] and [web](https://x.y)." },
+            { f: "B", b: "Other." },
+        ];
+        const q = buildQuiz(deck, (c) => c.f, (c) => c.b, 2, { reverse: true }).find((x) => x.item.f === "A");
+        expect(q?.labels[q.answer]).toBe("Uses auto or any with a link and Plain and web.");
+    });
+
+    it("forward labels are plain terms", () => {
+        const [q] = buildQuiz([{ f: "**stop_reason**", b: "Why it stopped." }, { f: "`tool_use`", b: "A call." }], (c) => c.f, (c) => c.b, 1);
+        expect(q?.labels.slice().sort()).toEqual(["stop_reason", "tool_use"]);
     });
 });

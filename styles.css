@@ -868,3 +868,16 @@
 .flashy-quiz .flashy-quiz-option.is-wrong {
     background: rgba(var(--color-red-rgb), 0.12);
 }
+
+/* Reverse: the term is the question, set large; definitions as options read as text, not as labels. */
+.flashy-quiz.is-reverse .flashy-quiz-text {
+    font-size: var(--font-ui-large);
+    font-weight: var(--font-semibold);
+}
+
+.flashy-quiz.is-reverse .flashy-quiz-option {
+    align-items: flex-start;
+    font-weight: var(--font-normal);
+    font-size: var(--font-ui-small);
+    line-height: var(--line-height-tight);
+}

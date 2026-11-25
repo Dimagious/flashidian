@@ -232,6 +232,52 @@ test("a quiz: pick the term for a definition, a right pick moves on, a wrong one
     expect(await obsidian.evaluate((app: App) => app.vault.getFiles().some((f) => f.path.startsWith("Flashy/log-")))).toBe(false);
 });
 
+test("a reverse quiz: pick the definition for a term, then retry the missed in the same direction", async ({ obsidian, win }) => {
+    await obsidian.openFile("Study.md", { mode: "preview" });
+    await win.locator(".markdown-reading-view .flashy-deck-row").first().click();
+    await win.getByRole("button", { name: "Reverse quiz: 4 terms" }).click();
+    await expect(win.locator(".flashy-quiz.is-reverse .flashy-deck")).toContainText("which definition fits?");
+
+    const answers: [string, string][] = [
+        ["Agentic Loop", "A control flow"],
+        ["stop_reason", "Why the model stopped"],
+        ["Subagent", "A separate Claude instance"],
+        ["tool_choice", "Forces, allows or forbids"],
+    ];
+    for (let i = 0; i < 4; i++) {
+        await expect(win.locator(".flashy-count")).toHaveText(`${i + 1} / 4`);
+        const term = (await win.locator(".flashy-quiz-text").textContent())?.trim() ?? "";
+        const hit = answers.find(([t]) => t === term);
+        if (!hit) throw new Error(`unknown term: ${term}`);
+        const options = win.locator(".flashy-quiz-option");
+        // No option gives its own term away.
+        for (const [t] of answers) await expect(options.filter({ hasText: t })).toHaveCount(0);
+        if (i === 0) {
+            await options.filter({ hasNotText: hit[1] }).first().click();
+            await expect(win.locator(".flashy-quiz-option.is-right")).toContainText(hit[1]);
+            await win.getByRole("button", { name: "Next" }).click();
+        } else {
+            await options.filter({ hasText: hit[1] }).click();
+            await expect(win.locator(".flashy-quiz-option.is-right")).toHaveCount(1);
+        }
+    }
+    await expect(win.locator(".flashy-done h2")).toHaveText("3 of 4 right");
+    await win.getByRole("button", { name: "Retry the 1 missed" }).click();
+    await expect(win.locator(".flashy-quiz.is-reverse")).toHaveCount(1);
+});
+
+test("the reverse quiz fits the phone", async ({ obsidian, win }) => {
+    await obsidian.mobile();
+    await obsidian.openFile("Study.md", { mode: "preview" });
+    await win.locator(".markdown-reading-view .flashy-deck-row").first().click();
+    await win.getByRole("button", { name: "Reverse quiz: 4 terms" }).click();
+    await obsidian.settle({ root: ".flashy-modal" });
+    await obsidian.checkLayout({ root: ".flashy-modal" });
+    await win.locator(".flashy-quiz-option").first().click();
+    await win.waitForTimeout(450);
+    await win.screenshot({ path: ".e2e/phone-quiz-reverse.png" });
+});
+
 test("the quiz fits the phone", async ({ obsidian, win }) => {
     await obsidian.mobile();
     await obsidian.openFile("Study.md", { mode: "preview" });

@@ -1,6 +1,6 @@
 import { type App, Component, getLanguage, MarkdownRenderer, Modal, setIcon } from "obsidian";
 import type { DeckCard, DeckProgress } from "../app/progress";
-import { buildQuiz, plainTerm, type Question } from "../core/quiz";
+import { buildQuiz, type Question } from "../core/quiz";
 import { type Grade, Session, shuffle } from "../core/session";
 import { type Strings, strings } from "./strings";
 
@@ -40,7 +40,7 @@ export class ReviewModal extends Modal {
     private repeatEl!: HTMLElement;
     private undoBtn!: HTMLButtonElement;
     private actionBtns: HTMLButtonElement[] = [];
-    private quiz: { questions: Question<DeckCard>[]; index: number; right: number; wrong: DeckCard[]; answered: boolean } | null = null;
+    private quiz: { questions: Question<DeckCard>[]; reverse: boolean; index: number; right: number; wrong: DeckCard[]; answered: boolean } | null = null;
     private quizTimer: number | null = null;
     private legend!: HTMLElement;
 
@@ -171,8 +171,15 @@ export class ReviewModal extends Modal {
         study.disabled = !today.length;
         study.addEventListener("click", () => this.start(today, "scheduled"));
         acts.createEl("button", { text: this.t.practiceAll(s.total) }).addEventListener("click", () => this.start(this.progress.items, "scheduled"));
-        const quiz = this.makeQuiz(this.progress.items);
-        if (quiz.length) acts.createEl("button", { cls: "flashy-quiz-start", text: this.t.quizStart(quiz.length) }).addEventListener("click", () => this.startQuiz(quiz));
+        const quiz = this.makeQuiz(this.progress.items, false);
+        if (quiz.length) {
+            acts.createEl("button", { cls: "flashy-quiz-start", text: this.t.quizStart(quiz.length) }).addEventListener("click", () => this.startQuiz(quiz, false));
+            const reverse = this.makeQuiz(this.progress.items, true);
+            if (reverse.length)
+                acts.createEl("button", { cls: "flashy-quiz-start", text: this.t.quizReverseStart(reverse.length) }).addEventListener("click", () =>
+                    this.startQuiz(reverse, true),
+                );
+        }
         const next = this.progress.nextDue();
         if (!today.length && next) home.createDiv({ cls: "flashy-home-note", text: this.t.nextOn(next.toLocaleDateString(getLanguage(), { day: "numeric", month: "long" })) });
     }
@@ -180,18 +187,18 @@ export class ReviewModal extends Modal {
     // ---------- quiz ----------
 
     /** Questions about `ask`, with wrong options drawn from every card of this review. */
-    private makeQuiz(ask: readonly DeckCard[]): Question<DeckCard>[] {
-        const all = buildQuiz(this.progress.items, (c) => c.card.front, (c) => c.card.back, Number.POSITIVE_INFINITY);
+    private makeQuiz(ask: readonly DeckCard[], reverse: boolean): Question<DeckCard>[] {
+        const all = buildQuiz(this.progress.items, (c) => c.card.front, (c) => c.card.back, Number.POSITIVE_INFINITY, { reverse });
         const wanted = new Set(ask);
         const asked = all.filter((q) => wanted.has(q.item));
         return asked.slice(0, QUIZ_SIZE);
     }
 
-    private startQuiz(questions: Question<DeckCard>[]): void {
+    private startQuiz(questions: Question<DeckCard>[], reverse: boolean): void {
         this.clearStage();
         this.root.addClass("is-round");
         this.root.addClass("is-quiz");
-        this.quiz = { questions, index: 0, right: 0, wrong: [], answered: false };
+        this.quiz = { questions, reverse, index: 0, right: 0, wrong: [], answered: false };
         this.showQuestion();
     }
 
@@ -213,15 +220,15 @@ export class ReviewModal extends Modal {
         const question = q.questions[q.index];
         if (!question) return this.finishQuiz();
         q.answered = false;
-        const view = this.stage.createDiv({ cls: "flashy-quiz" });
+        const view = this.stage.createDiv({ cls: q.reverse ? "flashy-quiz is-reverse" : "flashy-quiz" });
         const prompt = view.createDiv({ cls: "flashy-quiz-prompt" });
-        prompt.createDiv({ cls: "flashy-deck", text: `${question.item.deck} · ${this.t.quizAsk}` });
+        prompt.createDiv({ cls: "flashy-deck", text: `${question.item.deck} · ${q.reverse ? this.t.quizAskReverse : this.t.quizAsk}` });
         void MarkdownRenderer.render(this.app, question.prompt, prompt.createDiv({ cls: "flashy-quiz-text markdown-rendered" }), question.item.path, this.md);
         const list = view.createDiv({ cls: "flashy-quiz-options" });
-        question.options.forEach((o, i) => {
+        question.labels.forEach((label, i) => {
             const b = list.createEl("button", { cls: "flashy-quiz-option" });
             b.createSpan({ cls: "flashy-quiz-key", text: String(i + 1) });
-            b.createSpan({ cls: "flashy-quiz-label", text: plainTerm(o.card.front) });
+            b.createSpan({ cls: "flashy-quiz-label", text: label });
             b.addEventListener("click", () => this.pick(i));
         });
         const next = view.createEl("button", { cls: "mod-cta flashy-quiz-next is-hidden", text: this.t.quizNext });
@@ -273,8 +280,10 @@ export class ReviewModal extends Modal {
         done.createDiv({ cls: "flashy-home-note", text: this.t.quizNote });
         const acts = done.createDiv({ cls: "flashy-acts" });
         if (wrong.length) {
-            const again = this.makeQuiz(wrong);
-            if (again.length) acts.createEl("button", { cls: "mod-cta", text: this.t.quizRetry(again.length) }).addEventListener("click", () => this.startQuiz(again));
+            const reverse = q.reverse;
+            const again = this.makeQuiz(wrong, reverse);
+            if (again.length)
+                acts.createEl("button", { cls: "mod-cta", text: this.t.quizRetry(again.length) }).addEventListener("click", () => this.startQuiz(again, reverse));
         }
         acts.createEl("button", { cls: wrong.length ? "" : "mod-cta", text: this.t.toDeck }).addEventListener("click", () => this.showDeck());
         activeWindow.requestAnimationFrame(() =>
