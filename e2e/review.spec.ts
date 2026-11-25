@@ -131,7 +131,15 @@ test("a card reads itself aloud: the term in the deck's language, the answer in 
     await expect.poll(said).toEqual([["la cuchara", "es-ES"]]);
     await expect(win.locator(card)).not.toHaveClass(/is-flipped/);
 
+    // One speaker in view on each side, in the top right corner (WebKit showed the front one through the back).
+    const speakers = win.locator(`${card} .flashy-speak`);
+    const visible = (): Promise<number> => speakers.evaluateAll((els) => els.filter((e) => getComputedStyle(e).visibility === "visible").length);
+    expect(await visible()).toBe(1);
     await win.keyboard.press(" ");
+    await expect(win.locator(card)).toHaveClass(/is-flipped/);
+    expect(await visible()).toBe(1);
+    await expect(win.locator(`${card} .flashy-back .flashy-speak`)).toHaveCSS("visibility", "visible");
+    await expect(win.locator(`${card} .flashy-front .flashy-speak`)).toHaveCSS("visibility", "hidden");
     await win.keyboard.press("s");
     await expect.poll(said).toEqual([
         ["la cuchara", "es-ES"],

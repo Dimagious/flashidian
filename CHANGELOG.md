@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- On iPhone the front speaker showed through, mirrored, on the back of a card: only the side in view shows its speaker now. Reading aloud follows the silent switch, as other sounds of the system do.
+
 ## [0.7.1] - 2026-11-25
 
 ### Fixed

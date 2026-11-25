@@ -1053,8 +1053,13 @@
     margin: 0;
 }
 
-/* Only the top card speaks: the ones under it are scaled down by the stack and cannot be tapped anyway. */
-.flashy-card:not([data-depth="0"]) .flashy-speak {
+/*
+ * Only the top card speaks, and only on the side in view. WebKit (Obsidian on iPhone) does not hide a positioned child
+ * with the face's backface-visibility, so the front speaker showed through, mirrored, on the back.
+ */
+.flashy-card:not([data-depth="0"]) .flashy-speak,
+.flashy-card.is-flipped .flashy-front .flashy-speak,
+.flashy-card:not(.is-flipped) .flashy-back .flashy-speak {
     visibility: hidden;
 }
 
