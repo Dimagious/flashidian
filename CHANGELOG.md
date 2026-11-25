@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-25
+
 ### Added
 
 - Prompts for making cards with an assistant: *Copy a prompt for making cards* and four rows in the settings copy a prompt for lecture notes, foreign words, a chapter or short notes. The reply is a note in a format Flashy reads. Nothing calls a model from the plugin. The prompts are checked by an eval in `evals/prompts/` (24 inputs, each reply parsed by Flashy's own parsers).
