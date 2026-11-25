@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-25
+
 ### Added
 
 - Deck screen: the ways through a deck as three tiles, Cards, Quiz and Reverse, under the Study button.
