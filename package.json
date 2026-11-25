@@ -25,7 +25,7 @@
     "electron": "^44.10.2",
     "eslint": "^10.15.0",
     "obsidian": "^1.14.4",
-    "obsidian-plugin-dev-kit": "0.4.1",
+    "obsidian-plugin-dev-kit": "0.5.0",
     "typescript": "^6.0.3",
     "vite": "^8.3.8",
     "vitest": "^5.1.1"
