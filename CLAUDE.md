@@ -29,6 +29,7 @@ e2e/       Playwright in real Obsidian: the full review, empty note, phone layou
 npm run lint && npm run typecheck && npm test && npm run build   # the gates
 npm run release:check                                             # everything incl. versions and scorecard
 npm run e2e                                                       # needs macOS Obsidian; phone screenshots land in .e2e/
+npm run capture                                                   # README films: e2e/capture.spec.ts, then opdk demo -> docs/screens/*.gif
 npx opdk release patch --dry-run                                 # cut a release; push all commits first
 ```
 

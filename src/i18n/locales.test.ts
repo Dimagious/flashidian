@@ -49,6 +49,8 @@ describe("locales", () => {
         expect(t.blockNoFolder("")).not.toContain("undefined");
         expect(t.matchMisses(1)).toContain("1");
         expect(t.matchMisses(4)).toContain("4");
+        // One card is not "1 cards" (Russian and Japanese write the count in a form that does not change).
+        if (code !== "ru" && code !== "ja") expect(t.total(1)).not.toBe(t.total(2).replace("2", "1"));
     });
 
     it.each(codes)("%s names the copy-prompt command in the no-cards message as the command is called", (code) => {

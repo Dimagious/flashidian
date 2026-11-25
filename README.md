@@ -1,101 +1,67 @@
 # Flashy
 
-Flashcards for [Obsidian](https://obsidian.md/), made for reviewing on a phone. Tap a card to flip it, swipe right when you know it, swipe left to see it again.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Dimagious/flashidian/HEAD/docs/banner-dark.svg">
+  <img alt="Flashy (flashidian): your notes are already flashcards. A row of a table in a note, Japan and Tokyo, becomes a card swiped right as got it"
+       src="https://raw.githubusercontent.com/Dimagious/flashidian/HEAD/docs/banner-light.svg">
+</picture>
 
-Status: early prototype, not in the community directory yet.
+[![Latest release](https://img.shields.io/github/v/release/Dimagious/flashidian?color=6f4fe0)](https://github.com/Dimagious/flashidian/releases)
+[![Obsidian 1.13+](https://img.shields.io/badge/Obsidian-1.13%2B-6f4fe0)](https://obsidian.md)
+[![Languages](https://img.shields.io/badge/languages-7-6f4fe0)](#seven-languages)
+[![License: MIT](https://img.shields.io/badge/license-MIT-6f4fe0)](LICENSE)
+[![Buy me a coffee](https://img.shields.io/badge/support-buy%20me%20a%20coffee-6f4fe0)](https://buymeacoffee.com/dimagious)
 
-## Cards
+**Your notes are already flashcards.**
 
-Flashy reads the multi-line format of the Spaced Repetition plugin, so decks you already have work as they are:
+Headings, tables, lists and question callouts become a deck as they are. Review with a tap and a swipe on your phone. Nothing is written into your notes.
 
-```markdown
-**Agentic Loop**
-?
-A control flow where Claude repeats input, action and observation until the task is done.
-```
+<img alt="Flashy on a phone: a table of countries and capitals in a note, the same note as a deck with today's cards, a card flipped to its answer, swiped right with a green Got it, the next one swiped left with an orange Again, and the ring at the end of the round" src="https://raw.githubusercontent.com/Dimagious/flashidian/HEAD/docs/screens/hero.gif" width="100%">
 
-The front is the paragraph above a line with only `?` (or `??`), the back is the paragraph below it. Frontmatter, fenced code and the Spaced Repetition plugin's scheduling comments are skipped.
+**Install:** Settings → **Community plugins** → **Browse** → search for **Flashy**. Until Flashy is listed there, install it with [BRAT](https://github.com/TfTHacker/obsidian42-brat) from `Dimagious/flashidian`. Then open a note with a table or a glossary, add the property `flashy: true` and run **Flashy: Review cards in the current note**.
 
-## Cards from notes you already have
+[Every format and setting](docs/reference.md) · [Changelog](CHANGELOG.md)
 
-Add `flashy: true` to the properties of a note and Flashy finds the cards in it, no special syntax:
+## Why Flashy
 
-- **Headings**: every `## Term` is a card, the text under it (callouts, tables and code included) is the answer. A glossary becomes a deck as it is.
-- **Tables**: every row of a table with two or more columns; the first cell is the front.
-- **Lists**: top-level items like `term - definition`, `term: definition` or `**term** definition`.
+- **No card syntax.** The notes you already have are the deck: a glossary, a table, a list, a callout with a question.
+- **Made for the phone.** One card at a time, a 3D flip, swipe right when you know it, left to see it again.
+- **Your notes stay clean.** No scheduling comments, no IDs. Progress lives in a `Flashy/` folder and syncs without conflicts.
+- **FSRS scheduling**, and the multi-line `?` format of the Spaced Repetition plugin works as it is.
 
-- **Question callouts** (`flashy: callouts`): every `> [!question] Front` callout is a card, its body the answer. For a question longer than a title, put the answer in a nested callout:
+## Any note can be a deck
 
-  ```markdown
-  > [!question]
-  > The Moon always shows Earth the same face.
-  > Why?
-  > > [!answer]-
-  > > It turns once on its axis in the time it takes to go around Earth.
-  ```
+A glossary of `##` headings, question callouts, or a whole short note as one card. A table and a list work the same way.
 
-  Other callouts in the note stay notes.
+<img alt="On a phone: a biology glossary whose headings become cards, Nucleus on the front and its definition on the back; a note of question callouts whose questions become cards; and a short note about the octopus that becomes one card with its question on the front" src="https://raw.githubusercontent.com/Dimagious/flashidian/HEAD/docs/screens/formats.gif" width="100%">
 
-A note uses one shape: headings if it has any, otherwise tables, otherwise lists, otherwise question callouts. To pick one, set `flashy: headings`, `flashy: table`, `flashy: list` or `flashy: callouts`.
+## Your notes stay untouched
 
-**A note as one card**: with `flashy: note` the whole note is one card: its name on the front (or the `flashy-prompt` property, for a question), everything below as the answer. Notes like this in one folder make one deck, named after the folder. Two notes with the same name get their folder on the front. A card that two notes share (a glossary and a deck made from it) is reviewed once.
+Reviews go to a log in `Flashy/`, one file per device, so two devices never conflict. Each deck gets a note with its numbers as properties, ready for Bases.
 
-**Paste a deck**: the command *Create a deck from pasted text* takes terms and definitions copied from Quizlet (Export), a spreadsheet, a CSV file or a list, and writes a deck note next to the open note.
+<img alt="On a phone: a note of Spanish cards in source mode, a review with a card swiped right, the same note afterwards without a single change, and the deck's progress note in the Flashy folder with its numbers as properties" src="https://raw.githubusercontent.com/Dimagious/flashidian/HEAD/docs/screens/untouched.gif" width="100%">
 
-**Make cards with an assistant**: the command *Copy a prompt for making cards* (or the rows under *Make cards with an assistant* in the settings) copies a ready prompt for one kind of material: lecture notes into a glossary, foreign words into cards, a chapter into questions, short notes into one card each. Paste it into the assistant you use, paste your material below it, and put the reply into a note. Flashy calls no model and sends nothing anywhere. The prompts live in [`prompts/`](prompts/); [`evals/prompts/`](evals/prompts/) checks them on 24 sample inputs, parsing each reply with Flashy's own parsers.
+## Cards from your lecture notes
 
-## Your notes stay as you wrote them
+Copy a ready prompt, paste it with your notes into the assistant you use, and save the reply as a note: it is a deck. Four prompts, for lecture notes, foreign words, a chapter and short notes, each [checked on 24 sample inputs](evals/prompts/). Flashy itself calls no model and sends nothing anywhere.
 
-Flashy never writes into the notes with your cards. Progress lives in plain Markdown files in a `Flashy/` folder of your vault (the folder can be changed in settings), so it syncs with Obsidian Sync, iCloud or anything else that syncs notes, and survives reinstalling the plugin:
+<img alt="On a phone: messy lecture notes on economics, the prompt picker with four kinds of material, a notice that the prompt is copied, the assistant's reply saved as a note of headings, and the deck it makes with Demand on the first card" src="https://raw.githubusercontent.com/Dimagious/flashidian/HEAD/docs/screens/prompt.gif" width="100%">
 
-- `Flashy/log-<device>.md`: each phone or computer appends its reviews to its own log and never touches another's, so two devices cannot produce a sync conflict. Every device replays all logs.
-- `Flashy/<deck>.md`: one note per deck (`Flashy/<folder> (notes).md` for a folder of one-card notes) with its numbers as properties (`flashy-total`, `flashy-new`, `flashy-due`, `flashy-learned`, `flashy-learning`), for Bases or any other tool that reads properties.
+## Quiz and Match
 
-Moving or renaming a deck keeps its progress: a card is recognised by its text, not by its file. If you edit the front of a card, its history follows the answer.
+Four ways through a deck: cards, a quiz, a reverse quiz, and Match, pairs against the clock with a best time per deck. The quizzes and Match leave the schedule alone.
 
-## Front side and reading aloud
+<img alt="On a phone: the deck screen with four modes, a quiz where the right country for a capital turns green, and the Match grid where countries and capitals are tapped in pairs until a new best time" src="https://raw.githubusercontent.com/Dimagious/flashidian/HEAD/docs/screens/modes.gif" width="100%">
 
-The deck screen chooses what a card shows first: the term, the definition (the term hidden in it, so you recall the term) or a mix. The choice is kept, and the schedule does not change with it.
+## Coming from Spaced Repetition
 
-A speaker on the card, or the S key, reads the side in view. Set `flashy-lang: es` (any language code) in a deck's properties for the voice of its terms; answers are read in Russian when they are in Cyrillic, otherwise in English. Reading uses the voices of your system, offline.
-
-## Quiz
-
-The deck screen also offers a quiz of up to 20 questions: Flashy shows the first plain paragraph of an answer (callouts, lists and tables left out, the term itself hidden as `___`) and four terms from the same review to pick from. A right pick moves on by itself, a wrong one marks the answer and waits. At the end you can retry the ones you missed. Keys 1 to 4 pick, Enter moves on. The quiz does not change the schedule: picking an answer is easier than recalling it.
-
-The reverse quiz turns it around: the term is the question, and the options are four short definitions, each with its own term hidden so it does not give itself away.
-
-## Match
-
-Match deals six cards of the deck as twelve tiles, terms and short definitions shuffled together. Tap a term, then its definition: a right pair leaves the grid, a wrong one flashes. The clock runs until the last pair, and the best time of a deck is kept as `flashy-match-best` in its progress note. Match does not change the schedule.
-
-## Scheduling
-
-Flashy schedules with [FSRS](https://github.com/open-spaced-repetition/ts-fsrs). Swipe right (got it) and a new card comes back in a few days, then in weeks; swipe left (again) and it comes back tomorrow. Each deck opens on a screen with today's cards, new cards and learned cards. New cards are introduced at 20 a day across all decks, a number you can change in settings.
-
-## Review
-
-A deck list in any note, one tap to start:
-
-````markdown
-```flashy
-folder: Study/Biology
-```
-````
-
-Every note with cards in that folder and its subfolders becomes a row with today's count and a learned bar, plus a row for all of them together. The list redraws when the review closes.
-
-Or start from the command palette and the file explorer:
-
-- **Review cards in the current note**, a command.
-- **Review cards in a folder**, a command and a ribbon button; every note in the folder and its subfolders.
-- **Review cards with Flashy** in the context menu of a folder.
-
-During a review: tap or Space to flip, swipe or the arrow keys to grade, Backspace to undo the last card (also after it was written to the log). At the end of a round Flashy offers the cards you sent left as a practice round, which does not change the schedule.
+Your `?` decks open as they are, and Flashy leaves the plugin's `<!--SR:...-->` comments alone, so both plugins can run on the same notes. Flashy keeps its own schedule: your Spaced Repetition history does not carry over.
 
 ## Seven languages
 
-Screens, settings, commands and messages follow Obsidian's language: English, Russian, Spanish, German, French, Portuguese (Brazil) and Japanese, with English for any other. To use another one, pick it under *Language* in the settings. Your cards stay in the language you wrote them in.
+English, Russian, Spanish, German, French, Portuguese and Japanese. Flashy follows Obsidian's language; pick another under **Language** in the settings.
+
+<sub>The clips are the plugin running in Obsidian's mobile interface, in a phone-sized window on a desktop, with a demo vault.</sub>
 
 ## License
 

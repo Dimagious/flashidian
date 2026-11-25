@@ -2,7 +2,7 @@
   "name": "flashidian",
   "version": "0.11.0",
   "private": true,
-  "description": "Flashcards for Obsidian with a 3D flip and swipe grading.",
+  "description": "Your notes are already flashcards: headings, tables, lists and callouts become decks. Review with swipes on your phone, with FSRS. Nothing is written into your notes.",
   "scripts": {
     "build": "opdk build",
     "dev:vault": "opdk build --vault --watch",
@@ -13,7 +13,8 @@
     "scorecard:check": "opdk scan",
     "release:check": "opdk release check && npm run scorecard:check && npm run lint && npm run typecheck && npm run test",
     "e2e": "npm run build && playwright test",
-    "eval:prompts": "esbuild evals/prompts/run.ts --bundle --platform=node --format=esm --outfile=.eval/run.mjs --log-level=warning && node .eval/run.mjs"
+    "eval:prompts": "esbuild evals/prompts/run.ts --bundle --platform=node --format=esm --outfile=.eval/run.mjs --log-level=warning && node .eval/run.mjs",
+    "capture": "npm run build && CAPTURE=1 playwright test e2e/capture.spec.ts --reporter=list && opdk demo"
   },
   "license": "MIT",
   "author": "Dimagious",

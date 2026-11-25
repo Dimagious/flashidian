@@ -3,7 +3,7 @@
   "name": "Flashy",
   "version": "0.11.0",
   "minAppVersion": "1.13.0",
-  "description": "Review flashcards with a 3D flip and swipe grading: right to keep, left to repeat. Reads the Spaced Repetition card format.",
+  "description": "Your notes are already flashcards: headings, tables, lists and callouts become decks. Review with swipes on your phone, with FSRS. Nothing is written into your notes.",
   "author": "Dimagious",
   "authorUrl": "https://github.com/Dimagious",
   "isDesktopOnly": false,
