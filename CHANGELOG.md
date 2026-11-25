@@ -6,6 +6,7 @@
 
 ### Fixed
 
+- Animation frames go through `window`, as the community directory's review asks.
 - A deck of one card said "1 cards" (and "1 notes" for a folder of one note) in English, Spanish, German, French and Portuguese.
 
 ## [0.11.0] - 2026-11-25

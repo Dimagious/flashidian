@@ -44,7 +44,7 @@ npx opdk release patch --dry-run                                 # cut a release
 - Obsidian renders a code block twice in a tab: in the reading view and in the hidden editor. e2e locators scope to `.markdown-reading-view`. `DecksBlock` numbers its renders so a redraw that starts while another awaits does not double the rows.
 - `ProgressStore.load()` keeps what the session already knows: right after `vault.create` the cache can serve the old log.
 - `checkLayout()` returns nothing and throws on problems (overflow, touch targets under 44 px).
-- Timers and frames through `activeWindow`, DOM through `activeDocument` (popout windows).
+- Timers and animation frames through `window` (`window.setTimeout`, `window.requestAnimationFrame`): the community directory scanner warns on `activeWindow.requestAnimationFrame`, and the kit lint does not catch it. DOM through `activeDocument` (popout windows).
 - Every user-visible string lives in `src/i18n/<lang>.ts`. A new string goes into all seven files; `locales.test.ts` fails on a missing key, an empty text, a lost name (Flashy, Quizlet, `folder:`) or a long text left in English. Default language: Obsidian's (`setLanguage("auto", getLanguage())`), English when unsupported; command names change only after a restart.
 - The swipe legend under the card must stay one line in every language: a second line hides behind the card, and `checkLayout` does not see it. The phone test per language measures it.
 - No em dashes anywhere (code, copy, docs). Commits are authored by the developer only, no Claude trailers.

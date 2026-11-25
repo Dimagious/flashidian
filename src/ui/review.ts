@@ -348,8 +348,8 @@ export class ReviewModal extends Modal {
                 acts.createEl("button", { cls: "mod-cta", text: this.t.quizRetry(again.length) }).addEventListener("click", () => this.startQuiz(again, reverse));
         }
         acts.createEl("button", { cls: wrong.length ? "" : "mod-cta", text: this.t.toDeck }).addEventListener("click", () => this.showDeck());
-        activeWindow.requestAnimationFrame(() =>
-            activeWindow.requestAnimationFrame(() => val.setCssProps({ "--flashy-share": String(n ? q.right / n : 0) })),
+        window.requestAnimationFrame(() =>
+            window.requestAnimationFrame(() => val.setCssProps({ "--flashy-share": String(n ? q.right / n : 0) })),
         );
     }
 
@@ -629,9 +629,9 @@ export class ReviewModal extends Modal {
             }
             if (Math.abs(x) < 0.4 && Math.abs(y) < 0.4 && Math.abs(vx) < 0.02 && Math.abs(vy) < 0.02) return this.rest(el);
             this.pose(el, x, y);
-            activeWindow.requestAnimationFrame(step);
+            window.requestAnimationFrame(step);
         };
-        activeWindow.requestAnimationFrame(step);
+        window.requestAnimationFrame(step);
     }
 
     private fling(dir: 1 | -1, x = 0, y = 0, vx = 0, vy = -0.15): void {
@@ -654,9 +654,9 @@ export class ReviewModal extends Modal {
             this.pose(el, x, y);
             if (!this.flying) return;
             if (Math.abs(x) > limit) return this.commit(dir > 0 ? "keep" : "repeat");
-            activeWindow.requestAnimationFrame(step);
+            window.requestAnimationFrame(step);
         };
-        activeWindow.requestAnimationFrame(step);
+        window.requestAnimationFrame(step);
     }
 
     private commit(g: Grade): void {
@@ -686,7 +686,7 @@ export class ReviewModal extends Modal {
         const from = (g === "keep" ? 1 : -1) * (activeWindow.innerWidth * 0.6 + el.offsetWidth);
         el.addClass("is-live");
         this.pose(el, from, -40);
-        activeWindow.requestAnimationFrame(() => this.spring(el, from, -40, 0, 0));
+        window.requestAnimationFrame(() => this.spring(el, from, -40, 0, 0));
     }
 
     private flip(): void {
@@ -780,8 +780,8 @@ export class ReviewModal extends Modal {
             this.progress.refresh();
             this.showDeck();
         });
-        activeWindow.requestAnimationFrame(() =>
-            activeWindow.requestAnimationFrame(() => val.setCssProps({ "--flashy-share": String(n ? keep / n : 0) })),
+        window.requestAnimationFrame(() =>
+            window.requestAnimationFrame(() => val.setCssProps({ "--flashy-share": String(n ? keep / n : 0) })),
         );
     }
 }

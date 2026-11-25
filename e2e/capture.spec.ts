@@ -288,3 +288,111 @@ test.describe("with lecture notes and an assistant's reply", () => {
         await film.shot({ hold: 2.2, caption: 4, settle: true });
     });
 });
+
+/**
+ * The community directory listing: five desktop pictures at 1200 x 800 and five phone pictures at 900 x 1600, dark, as
+ * the directory page is. `opdk demo` copies them to docs/listing (demo.outputs in opdk.config.mjs).
+ */
+test.describe("listing", () => {
+    test.use({ seed: { files: HISTORY } });
+
+    test("phone pictures", async ({ obsidian, win, demo }) => {
+        await obsidian.mobile({ width: 450, height: 800 });
+        await demo.cleanUi();
+        await obsidian.setTheme({ mode: "dark" });
+        // The match clock redraws every 100 ms, so its picture does not wait for a quiet page.
+        const still = (name: string, settle = true): Promise<unknown> => demo.still(name, { preset: "listing-phone", out: "listing", cursor: false, settle });
+
+        await obsidian.readingView(CAPITALS);
+        await obsidian.runCommand("flashidian:review-note");
+        await expect(win.locator(".flashy-home")).toBeVisible();
+        await still("m1-deck");
+
+        await win.locator(".flashy-home .mod-cta").click();
+        await win.locator(card).click();
+        await win.waitForTimeout(700);
+        const box = await win.locator(card).boundingBox();
+        if (!box) throw new Error("no card");
+        await win.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        await win.mouse.down();
+        await win.mouse.move(box.x + box.width * 0.65, box.y + box.height / 2 + 8, { steps: 8 });
+        await still("m2-swipe");
+        await win.mouse.move(box.x + box.width * 1.2, box.y + box.height / 2 + 12, { steps: 4 });
+        await win.mouse.up();
+        for (let i = 0; i < 40 && !(await win.locator(".flashy-done").isVisible()); i++) {
+            await win.keyboard.press(i % 3 === 1 ? "ArrowLeft" : "ArrowRight");
+            await win.waitForTimeout(450);
+        }
+        await win.waitForTimeout(1200);
+        await still("m3-round");
+        await win.locator(".flashy-close").click();
+
+        await obsidian.runCommand("flashidian:review-note");
+        await win.locator(".flashy-mode", { hasText: "Quiz" }).click();
+        const prompt = (await win.locator(".flashy-quiz-text").textContent()) ?? "";
+        const country = Object.keys(CAPITAL).find((c) => prompt.includes(CAPITAL[c] ?? "\u0000"));
+        await win.locator(".flashy-quiz-option", { hasText: country ?? "" }).click();
+        await expect(win.locator(".flashy-quiz-option.is-right")).toHaveCount(1);
+        await still("m4-quiz");
+        await win.locator(".flashy-close").click();
+
+        await obsidian.runCommand("flashidian:review-note");
+        await win.locator(".flashy-mode", { hasText: "Match" }).click();
+        const terms = win.locator(".flashy-match-tile.is-term:not(.is-matched)");
+        await expect(win.locator(".flashy-match-tile")).toHaveCount(12);
+        const countries = (await terms.allTextContents()).map((t) => t.trim());
+        for (const c of countries.slice(0, 2)) {
+            await win.locator(".flashy-match-tile.is-term").filter({ hasText: new RegExp(`^${c}$`) }).click();
+            await win.locator(".flashy-match-tile.is-definition").filter({ hasText: new RegExp(`^${CAPITAL[c] ?? ""}$`) }).click();
+        }
+        await win.locator(".flashy-match-tile.is-term:not(.is-matched)").first().click();
+        await win.waitForTimeout(400);
+        await still("m5-match", false);
+    });
+
+    test("desktop pictures", async ({ obsidian, win, demo }) => {
+        await demo.cleanUi({ sidebars: false });
+        await obsidian.setTheme({ mode: "dark" });
+        const still = (name: string): Promise<unknown> => demo.still(name, { preset: "listing-desktop", out: "listing", cursor: false, settle: true });
+
+        await obsidian.readingView("Study.md");
+        await expect(win.locator(".markdown-reading-view .flashy-deck-row").first()).toBeVisible();
+        await still("d1-decks");
+
+        await obsidian.readingView("Decks/Biology - The Cell.md");
+        await obsidian.runCommand("flashidian:review-note");
+        await win.locator(".flashy-home .mod-cta").click();
+        await win.locator(card).click();
+        await win.waitForTimeout(700);
+        await still("d2-card");
+        await win.locator(".flashy-close").click();
+
+        await obsidian.readingView("Welcome.md");
+        await obsidian.runCommand("flashidian:paste-deck");
+        await win.locator(".flashy-paste-area").fill(readFileSync("e2e/data/music-tempo-quizlet.tsv", "utf8"));
+        await win.locator(".flashy-paste-modal input[type=text]").fill("Music - Tempo");
+        await expect(win.locator(".flashy-paste-found")).toHaveText("Cards found: 8");
+        await still("d3-quizlet");
+        await win.keyboard.press("Escape");
+
+        await obsidian.readingView(SPANISH);
+        await obsidian.evaluate((app: App) => {
+            const s = (app as unknown as { setting: { open: () => void; openTabById: (id: string) => void } }).setting;
+            s.open();
+            s.openTabById("flashidian");
+        });
+        await expect(win.locator(".setting-item", { hasText: "Lecture notes into a glossary" })).toBeVisible();
+        await still("d4-settings");
+        await win.keyboard.press("Escape");
+
+        await obsidian.runCommand("flashidian:review-note");
+        await win.locator(".flashy-home .mod-cta").click();
+        await win.keyboard.press("ArrowRight");
+        await win.locator(".flashy-close").click();
+        const summary = "Flashy/Spanish - Kitchen.md";
+        await expect.poll(() => obsidian.evaluate((app: App, p: string) => !!app.vault.getFileByPath(p), summary)).toBe(true);
+        await obsidian.readingView(summary);
+        await expect(win.locator(".workspace-leaf.mod-active .metadata-container")).toBeVisible();
+        await still("d5-progress");
+    });
+});

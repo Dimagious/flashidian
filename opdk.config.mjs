@@ -17,6 +17,8 @@ export default defineConfig({
         mp4: false,
         poster: false,
         loop: "off",
+        // The community directory listing's pictures go to their own folder.
+        outputs: { listing: "docs/listing" },
         gif: { colors: 160, fps: 12, width: 1000 },
         films: {
             hero: { layout: "phone-captions", phone: phone("Your notes are\nalready flashcards") },
