@@ -1,6 +1,7 @@
 import { type App, Component, getLanguage, MarkdownRenderer, Modal, setIcon } from "obsidian";
 import type { DeckCard, DeckProgress } from "../app/progress";
 import { buildQuiz, type Question } from "../core/quiz";
+import { answerAsFront, answerFirst, SIDES, type Side, speechLang, speechText } from "../core/side";
 import { type Grade, Session, shuffle } from "../core/session";
 import { type Strings, strings } from "./strings";
 
@@ -17,6 +18,18 @@ const SPRING_C = 0.019;
 
 /** A scheduled round writes every grade to the log; a practice round (the cards sent left, again) writes nothing. */
 type RoundKind = "scheduled" | "practice";
+
+/** Choices the plugin keeps for every review: the side a card shows first. */
+export interface ReviewPrefs {
+    side(): Side;
+    setSide(side: Side): Promise<void>;
+}
+
+/** What text-to-speech reads on each face of a card, and in which language. */
+interface Speech {
+    front: [string, string];
+    back: [string, string];
+}
 
 export class ReviewModal extends Modal {
     /** Called once the reviews of this modal are written, so a deck list can redraw with the new numbers. */
@@ -43,10 +56,15 @@ export class ReviewModal extends Modal {
     private quiz: { questions: Question<DeckCard>[]; reverse: boolean; index: number; right: number; wrong: DeckCard[]; answered: boolean } | null = null;
     private quizTimer: number | null = null;
     private legend!: HTMLElement;
+    /** Cards of this round that show their answer first (all of them, none, or a coin per card). */
+    private answerFirst = new Set<DeckCard>();
+    private readonly speech = new WeakMap<HTMLElement, Speech>();
+    private readonly synth: SpeechSynthesis | null = "speechSynthesis" in activeWindow ? activeWindow.speechSynthesis : null;
 
     constructor(
         app: App,
         private readonly progress: DeckProgress,
+        private readonly prefs: ReviewPrefs,
     ) {
         super(app);
     }
@@ -64,6 +82,7 @@ export class ReviewModal extends Modal {
         this.scope.register([], " ", () => (inCards() && this.flip(), false));
         this.scope.register([], "ArrowUp", () => (inCards() && this.flip(), false));
         this.scope.register([], "ArrowDown", () => (inCards() && this.flip(), false));
+        this.scope.register([], "s", () => (inCards() && this.speakTop(), false));
         this.scope.register([], "Backspace", () => (inRound() && !this.quiz && this.undo(), false));
         for (const n of ["1", "2", "3", "4"]) this.scope.register([], n, () => (this.quiz && this.pick(Number(n) - 1), false));
         this.scope.register([], "Enter", () => (this.quiz?.answered && this.nextQuestion(), false));
@@ -71,6 +90,7 @@ export class ReviewModal extends Modal {
     }
 
     onClose(): void {
+        this.synth?.cancel();
         if (this.quizTimer !== null) window.clearTimeout(this.quizTimer);
         const item = this.session.peek();
         if (this.flying && item && this.kind === "scheduled") this.progress.record(item, this.flying);
@@ -170,16 +190,43 @@ export class ReviewModal extends Modal {
         const study = acts.createEl("button", { cls: "mod-cta", text: today.length ? this.t.study(today.length) : this.t.allDone });
         study.disabled = !today.length;
         study.addEventListener("click", () => this.start(today, "scheduled"));
-        acts.createEl("button", { text: this.t.practiceAll(s.total) }).addEventListener("click", () => this.start(this.progress.items, "scheduled"));
+
+        // The ways through a deck, side by side as Quizlet shows them: every card, a quiz, a reverse quiz.
+        const modes = home.createDiv({ cls: "flashy-modes" });
+        const mode = (icon: string, label: string, n: number, aria: string, run: () => void): void => {
+            const b = modes.createEl("button", { cls: "flashy-mode", attr: { "aria-label": aria } });
+            setIcon(b.createSpan({ cls: "flashy-mode-icon" }), icon);
+            b.createSpan({ cls: "flashy-mode-label", text: label });
+            b.createSpan({ cls: "flashy-mode-n", text: String(n) });
+            b.addEventListener("click", run);
+        };
+        mode("layers", this.t.modeCards, s.total, this.t.practiceAll(s.total), () => this.start(this.progress.items, "scheduled"));
         const quiz = this.makeQuiz(this.progress.items, false);
-        if (quiz.length) {
-            acts.createEl("button", { cls: "flashy-quiz-start", text: this.t.quizStart(quiz.length) }).addEventListener("click", () => this.startQuiz(quiz, false));
-            const reverse = this.makeQuiz(this.progress.items, true);
-            if (reverse.length)
-                acts.createEl("button", { cls: "flashy-quiz-start", text: this.t.quizReverseStart(reverse.length) }).addEventListener("click", () =>
-                    this.startQuiz(reverse, true),
-                );
-        }
+        if (quiz.length) mode("list-checks", this.t.modeQuiz, quiz.length, this.t.quizStart(quiz.length), () => this.startQuiz(quiz, false));
+        const reverse = quiz.length ? this.makeQuiz(this.progress.items, true) : [];
+        if (reverse.length)
+            mode("arrow-left-right", this.t.modeReverse, reverse.length, this.t.quizReverseStart(reverse.length), () => this.startQuiz(reverse, true));
+
+        // The side a card shows first, for studying and for going through every card.
+        const side = home.createDiv({ cls: "flashy-side" });
+        side.createSpan({ cls: "flashy-side-label", text: this.t.side });
+        const seg = side.createDiv({ cls: "flashy-seg", attr: { role: "radiogroup", "aria-label": this.t.side } });
+        const labels: Record<Side, string> = { term: this.t.sideTerm, definition: this.t.sideDefinition, mixed: this.t.sideMixed };
+        const pills = SIDES.map((value) => {
+            const b = seg.createEl("button", { text: labels[value], attr: { role: "radio" } });
+            b.addEventListener("click", () => {
+                void this.prefs.setSide(value);
+                mark();
+            });
+            return [value, b] as const;
+        });
+        const mark = (): void => {
+            for (const [value, b] of pills) {
+                b.toggleClass("is-active", value === this.prefs.side());
+                b.setAttr("aria-checked", String(value === this.prefs.side()));
+            }
+        };
+        mark();
         const next = this.progress.nextDue();
         if (!today.length && next) home.createDiv({ cls: "flashy-home-note", text: this.t.nextOn(next.toLocaleDateString(getLanguage(), { day: "numeric", month: "long" })) });
     }
@@ -299,6 +346,8 @@ export class ReviewModal extends Modal {
         this.root.addClass("is-round");
         this.root.toggleClass("is-practice", kind === "practice");
         this.session = new Session(this.shuffled ? shuffle(cards) : cards.slice());
+        const side = this.prefs.side();
+        this.answerFirst = new Set(this.session.items.filter(() => answerFirst(side)));
         this.busy = false;
         this.layout();
         this.hud();
@@ -333,21 +382,62 @@ export class ReviewModal extends Modal {
     }
 
     private makeCard(item: DeckCard): HTMLElement {
-        const el = createDiv({ cls: "flashy-card" });
+        const { front: term, back: answer } = item.card;
+        const flipped = this.answerFirst.has(item);
+        const el = createDiv({ cls: flipped ? "flashy-card is-answer-first" : "flashy-card" });
         const flipper = el.createDiv({ cls: "flashy-flipper" });
         const front = flipper.createDiv({ cls: "flashy-face flashy-front" });
         front.createDiv({ cls: "flashy-deck", text: item.deck });
-        const term = front.createDiv({ cls: "flashy-term markdown-rendered" });
-        front.createDiv({ cls: "flashy-hint", text: this.t.tapHint });
         const back = flipper.createDiv({ cls: "flashy-face flashy-back" });
         const scroll = back.createDiv({ cls: "flashy-scroll markdown-rendered" });
-        void MarkdownRenderer.render(this.app, item.card.front, term, item.path, this.md);
-        void MarkdownRenderer.render(this.app, item.card.back, scroll, item.path, this.md);
+        if (flipped) {
+            // The answer asks, with the term hidden in it; the back names the term above the whole answer.
+            const prompt = answerAsFront(term, answer);
+            void MarkdownRenderer.render(this.app, prompt, front.createDiv({ cls: "flashy-prompt markdown-rendered" }), item.path, this.md);
+            void MarkdownRenderer.render(this.app, term, scroll.createDiv({ cls: "flashy-answer-term" }), item.path, this.md);
+            void MarkdownRenderer.render(this.app, answer, scroll.createDiv(), item.path, this.md);
+            const asked = speechText(prompt, false).replace(/_{3,}/g, "…");
+            this.speech.set(el, { front: [asked, speechLang(asked)], back: [speechText(term, true), speechLang(term, item.lang)] });
+        } else {
+            void MarkdownRenderer.render(this.app, term, front.createDiv({ cls: "flashy-term markdown-rendered" }), item.path, this.md);
+            void MarkdownRenderer.render(this.app, answer, scroll, item.path, this.md);
+            const said = speechText(answer, false);
+            this.speech.set(el, { front: [speechText(term, true), speechLang(term, item.lang)], back: [said, speechLang(said)] });
+        }
+        front.createDiv({ cls: "flashy-hint", text: this.t.tapHint });
+        if (this.synth) {
+            for (const [face, which] of [[front, "front"], [back, "back"]] as const) {
+                const b = face.createEl("button", { cls: "flashy-speak clickable-icon", attr: { "aria-label": this.t.speak } });
+                setIcon(b, "volume-2");
+                b.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    this.speak(el, which);
+                });
+            }
+        }
         el.createDiv({ cls: "flashy-glow" });
         el.createDiv({ cls: "flashy-stamp is-keep", text: this.t.keep });
         el.createDiv({ cls: "flashy-stamp is-repeat", text: this.t.repeat });
         this.bindDrag(el);
         return el;
+    }
+
+    /** Reads one face of a card in its language, with a voice of that language when the system has one. */
+    private speak(el: HTMLElement, face: "front" | "back"): void {
+        const said = this.speech.get(el)?.[face];
+        if (!this.synth || !said?.[0]) return;
+        const [text, lang] = said;
+        this.synth.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = lang;
+        const voice = this.synth.getVoices().find((v) => v.lang.toLowerCase().startsWith(lang.toLowerCase()));
+        if (voice) u.voice = voice;
+        this.synth.speak(u);
+    }
+
+    private speakTop(): void {
+        const el = this.top();
+        if (el) this.speak(el, el.hasClass("is-flipped") ? "back" : "front");
     }
 
     private hud(): void {
@@ -475,6 +565,8 @@ export class ReviewModal extends Modal {
 
         el.addEventListener("pointerdown", (e) => {
             if (el !== this.top() || this.busy || e.button > 0) return;
+            // The speaker is a button on the card, not a tap that flips it.
+            if ((e.target as Node | null)?.instanceOf(Element) && (e.target as Element).closest(".flashy-speak")) return;
             id = e.pointerId;
             x0 = e.clientX;
             y0 = e.clientY;

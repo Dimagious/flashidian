@@ -56,6 +56,8 @@ Decided after an architect and a marketer reviewed the options: notes with cards
 
 - The quiz hides a card's term in its own answer only when the answer is a sentence (more than three words): a short answer is a name, and "Mexico City" masked as "___ City" read as a bug.
 
+- Front side (`term`, `definition`, `mixed`) lives in settings and is switched on the deck screen through `ReviewPrefs`; a definition-first card masks its term with the same rule as the quiz. Speech is the Web Speech API (`speechSynthesis`), no network: the term side takes `flashy-lang`, an answer is guessed (Cyrillic means ru, else en). Only the top card shows its speaker: stacked cards are scaled below the 44 px touch target.
+
 ## Seed vault: the base of tests and demos
 
 `e2e-vault.pristine/` holds decks anyone recognises, in English, one card format per topic: `Decks/Spanish - Kitchen` (`?` cards), `Biology - The Cell` (headings, `flashy: true`, with a callout, a list and a table inside answers), `Geography - Capitals` (table), `Cooking - Techniques` (list). `e2e/data/music-tempo-quizlet.tsv` is a Quizlet export for the paste flow. Parser traps (code, SR comments, repeated fronts, shared answers, a long answer) live in `Edge cases/`, out of the demo decks. No AI or IT terms in the demo decks, and never notes from Dmitriy's vault.

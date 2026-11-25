@@ -46,7 +46,7 @@ export function plainTerm(front: string): string {
 }
 
 /** Option text is shown as is, not rendered: code marks, italics and links go. */
-function plainText(text: string): string {
+export function plainText(text: string): string {
     return text
         .replace(/`([^`]+)`/g, "$1")
         .replace(/\[\[(?:[^\]|]+\|)?([^\]]+)\]\]/g, "$1")

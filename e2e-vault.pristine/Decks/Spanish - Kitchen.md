@@ -1,3 +1,7 @@
+---
+flashy-lang: es
+---
+
 # Spanish - Kitchen
 
 la cuchara

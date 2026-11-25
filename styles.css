@@ -881,3 +881,180 @@
     font-size: var(--font-ui-small);
     line-height: var(--line-height-tight);
 }
+
+/* ---------- deck screen: modes and front side ---------- */
+
+.flashy-modes {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--size-4-2);
+    width: 100%;
+}
+
+.flashy .flashy-mode {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--size-4-1);
+    min-width: 0;
+    height: auto;
+    min-height: 84px;
+    padding: var(--size-4-3) var(--size-4-2);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-l);
+    background: var(--background-primary);
+    box-shadow: none;
+    white-space: normal;
+    transition: border-color 0.2s, transform 0.12s;
+}
+
+.theme-dark .flashy .flashy-mode {
+    background: var(--background-secondary);
+}
+
+.flashy .flashy-mode:hover {
+    border-color: var(--interactive-accent);
+}
+
+.flashy .flashy-mode:active {
+    transform: scale(0.97);
+}
+
+.flashy-mode-icon {
+    display: flex;
+    color: var(--interactive-accent);
+}
+
+.flashy-mode-label {
+    overflow: hidden;
+    max-width: 100%;
+    font-weight: var(--font-semibold);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.flashy-mode-n {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    font-variant-numeric: tabular-nums;
+}
+
+.flashy-side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--size-4-2);
+    width: 100%;
+}
+
+.flashy-side-label {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    font-weight: var(--font-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.flashy-seg {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2px;
+    width: 100%;
+    padding: 3px;
+    border-radius: var(--radius-m);
+    background: var(--background-modifier-hover);
+}
+
+.flashy .flashy-seg button {
+    min-width: 0;
+    height: auto;
+    min-height: 34px;
+    padding: var(--size-4-1) var(--size-4-2);
+    border-radius: var(--radius-s);
+    background: transparent;
+    box-shadow: none;
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    white-space: nowrap;
+}
+
+.flashy .flashy-seg button.is-active {
+    background: var(--background-primary);
+    box-shadow: var(--shadow-s);
+    color: var(--text-normal);
+    font-weight: var(--font-semibold);
+}
+
+.is-phone .flashy .flashy-seg button {
+    min-height: 44px;
+}
+
+/* ---------- card: read aloud, answer first ---------- */
+
+.flashy-speak {
+    position: absolute;
+    z-index: 2;
+    color: var(--text-muted);
+}
+
+.flashy-front .flashy-speak {
+    top: var(--size-4-3);
+    right: var(--size-4-3);
+}
+
+.flashy-front .flashy-deck {
+    padding-right: 40px;
+}
+
+.flashy-back .flashy-speak {
+    right: var(--size-4-3);
+    bottom: var(--size-4-3);
+}
+
+.flashy-back .flashy-scroll {
+    padding-bottom: 60px;
+}
+
+.is-phone .flashy-speak {
+    width: 44px;
+    height: 44px;
+}
+
+.flashy-prompt {
+    overflow-y: auto;
+    margin: auto 0;
+    font-size: clamp(17px, 4.6vw, 21px);
+    line-height: 1.4;
+    text-align: center;
+    text-wrap: pretty;
+}
+
+.flashy-prompt > :first-child {
+    margin-top: 0;
+}
+
+.flashy-prompt > :last-child {
+    margin-bottom: 0;
+}
+
+.flashy-answer-term {
+    margin-bottom: var(--size-4-3);
+    font-size: 1.5em;
+    font-weight: var(--font-bold);
+    line-height: 1.2;
+}
+
+.flashy-answer-term p {
+    margin: 0;
+}
+
+/* Only the top card speaks: the ones under it are scaled down by the stack and cannot be tapped anyway. */
+.flashy-card:not([data-depth="0"]) .flashy-speak {
+    visibility: hidden;
+}
+
+.is-phone .flashy .flashy-speak {
+    min-width: 44px;
+    min-height: 44px;
+}

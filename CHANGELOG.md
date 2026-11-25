@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added
+
+- Deck screen: the ways through a deck as three tiles, Cards, Quiz and Reverse, under the Study button.
+- Front side: Term, Definition or Mixed, on the deck screen and in the settings. Definition shows the answer with the term hidden and asks for the term; the schedule is the same card's.
+- Read aloud: a speaker on the card and the S key read the side in view. The term side speaks the note's `flashy-lang` (for example `es`), an answer is read in Russian when it is Cyrillic, otherwise in English.
+
 ### Fixed
 
 - The quiz no longer masks a short answer: "Mexico City" for Mexico stays whole instead of showing "___ City". Terms are still hidden inside definitions.

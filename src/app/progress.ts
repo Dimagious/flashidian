@@ -10,6 +10,8 @@ export interface DeckCard {
     card: Card;
     path: string;
     deck: string;
+    /** The language of the term side for text-to-speech, from the note's `flashy-lang` property. */
+    lang?: string;
     id: CardId;
     state?: CardState;
 }

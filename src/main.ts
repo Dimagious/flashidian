@@ -3,11 +3,12 @@ import { type DeckCard, DeckProgress } from "./app/progress";
 import { DEFAULTS, FlashySettingTab, type FlashySettings } from "./app/settings";
 import { ProgressStore } from "./app/store";
 import { cardIds } from "./core/key";
+import { isSide } from "./core/side";
 import { parseCards } from "./core/parse";
 import { modeOf, parseStructured } from "./core/structured";
 import { DecksBlock, parseBlock } from "./ui/decks-block";
 import { PasteModal } from "./ui/paste";
-import { ReviewModal } from "./ui/review";
+import { ReviewModal, type ReviewPrefs } from "./ui/review";
 import { strings } from "./ui/strings";
 
 export default class FlashyPlugin extends Plugin {
@@ -17,6 +18,7 @@ export default class FlashyPlugin extends Plugin {
     async onload(): Promise<void> {
         const t = strings();
         this.settings = { ...DEFAULTS, ...((await this.loadData()) as Partial<FlashySettings> | null) };
+        if (!isSide(this.settings.side)) this.settings.side = DEFAULTS.side;
         this.store = new ProgressStore(this.app, () => this.settings.folder);
         this.addSettingTab(new FlashySettingTab(this.app, this));
 
@@ -49,7 +51,12 @@ export default class FlashyPlugin extends Plugin {
 
         this.registerMarkdownCodeBlockProcessor("flashy", (source, el, ctx) => {
             ctx.addChild(
-                new DecksBlock(el, this.app, { reload: () => this.store.load().then(() => undefined), build: (f) => this.build(f), notesIn }, parseBlock(source).folder),
+                new DecksBlock(
+                    el,
+                    this.app,
+                    { reload: () => this.store.load().then(() => undefined), build: (f) => this.build(f), notesIn, prefs: () => this.prefs() },
+                    parseBlock(source).folder,
+                ),
             );
         });
 
@@ -76,7 +83,18 @@ export default class FlashyPlugin extends Plugin {
             new Notice(strings().noCards);
             return;
         }
-        new ReviewModal(this.app, progress).open();
+        new ReviewModal(this.app, progress, this.prefs()).open();
+    }
+
+    /** The review choices a modal reads and changes: the side shown first. */
+    private prefs(): ReviewPrefs {
+        return {
+            side: () => this.settings.side,
+            setSide: async (side) => {
+                this.settings.side = side;
+                await this.saveSettings();
+            },
+        };
     }
 
     /** The cards of these notes bound to the progress already loaded; null when none of them has a card. */
@@ -89,7 +107,9 @@ export default class FlashyPlugin extends Plugin {
         const seen = new Set<string>();
         for (const file of decks) {
             const text = await this.app.vault.cachedRead(file);
-            const mode = modeOf(this.app.metadataCache.getFileCache(file)?.frontmatter?.flashy);
+            const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
+            const mode = modeOf(fm?.flashy);
+            const lang: unknown = fm?.["flashy-lang"];
             const parsed = [...parseCards(text), ...(mode ? parseStructured(text, mode) : [])];
             const ids = cardIds(parsed);
             let added = 0;
@@ -97,7 +117,7 @@ export default class FlashyPlugin extends Plugin {
                 const id = ids[i];
                 if (!id || seen.has(id.key)) return;
                 seen.add(id.key);
-                cards.push({ card, path: file.path, deck: file.basename, id });
+                cards.push({ card, path: file.path, deck: file.basename, id, ...(typeof lang === "string" && lang.trim() ? { lang: lang.trim() } : {}) });
                 added++;
             });
             if (added) withCards.push(file);

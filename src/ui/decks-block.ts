@@ -1,6 +1,6 @@
 import { type App, MarkdownRenderChild, normalizePath, setIcon, type TFile, TFolder } from "obsidian";
 import type { DeckProgress } from "../app/progress";
-import { ReviewModal } from "./review";
+import { ReviewModal, type ReviewPrefs } from "./review";
 import { strings } from "./strings";
 
 /** What the plugin lends the block: reading the logs once, building a review from notes, the notes of a folder. */
@@ -8,6 +8,7 @@ export interface DeckSource {
     reload(): Promise<void>;
     build(files: TFile[]): Promise<DeckProgress | null>;
     notesIn(folder: TFolder): TFile[];
+    prefs(): ReviewPrefs;
 }
 
 /** `folder: <path>` on its own line; the block is the deck list of that folder and its subfolders. */
@@ -82,7 +83,7 @@ export class DecksBlock extends MarkdownRenderChild {
         badge.createDiv({ cls: "flashy-deck-today-n", text: String(today) });
         badge.createDiv({ cls: "flashy-deck-today-label", text: t.today });
         row.addEventListener("click", () => {
-            const modal = new ReviewModal(this.app, progress);
+            const modal = new ReviewModal(this.app, progress, this.source.prefs());
             modal.onClosed = () => void this.render();
             modal.open();
         });

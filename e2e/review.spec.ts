@@ -88,7 +88,55 @@ test("a scheduled round: deck screen, flip, swipes, undo, then the log and the d
         )
         .toBe("10 3133333333 10 9 1 0");
     const deck = await obsidian.evaluate(async (app: App, path: string) => app.vault.read(app.vault.getFileByPath(path)!), SPANISH);
-    expect(deck).not.toContain("flashy");
+    expect(deck).toBe(readFileSync(`e2e-vault.pristine/${SPANISH}`, "utf8"));
+});
+
+test("the deck screen: three modes, and the front side it remembers; definition first hides the term", async ({ obsidian, win }) => {
+    await obsidian.openFile(SPANISH, { mode: "preview" });
+    await obsidian.runCommand("flashidian:review-note");
+    await expect(win.locator(".flashy-mode .flashy-mode-label")).toHaveText(["Cards", "Quiz", "Reverse"]);
+    await expect(win.locator(".flashy-mode .flashy-mode-n")).toHaveText(["10", "10", "10"]);
+    await expect(win.getByRole("radio", { name: "Term" })).toHaveAttribute("aria-checked", "true");
+
+    await win.getByRole("radio", { name: "Definition" }).click();
+    await expect(win.getByRole("radio", { name: "Definition" })).toHaveAttribute("aria-checked", "true");
+    await expect.poll(() => obsidian.evaluate((app: App) => (app as unknown as { plugins: { plugins: Record<string, { settings: { side: string } }> } }).plugins.plugins.flashidian?.settings.side)).toBe("definition");
+
+    await win.getByRole("button", { name: "Study 10" }).click();
+    await expect(win.locator(card)).toHaveClass(/is-answer-first/);
+    await expect(win.locator(`${card} .flashy-prompt`)).toContainText("Pásame ___, por favor.");
+    await expect(win.locator(`${card} .flashy-prompt`)).not.toContainText("cuchara");
+    await win.screenshot({ path: ".e2e/answer-first.png" });
+    await win.locator(card).click();
+    await expect(win.locator(`${card} .flashy-answer-term`)).toHaveText("la cuchara");
+
+    // The choice outlives the modal.
+    await win.getByRole("button", { name: "Close" }).first().click();
+    await obsidian.runCommand("flashidian:review-note");
+    await expect(win.getByRole("radio", { name: "Definition" })).toHaveAttribute("aria-checked", "true");
+});
+
+test("a card reads itself aloud: the term in the deck's language, the answer in its own, and the speaker does not flip", async ({ obsidian, win }) => {
+    await obsidian.openFile(SPANISH, { mode: "preview" });
+    await obsidian.runCommand("flashidian:review-note");
+    await win.evaluate(() => {
+        const w = window as unknown as { said: string[][] };
+        w.said = [];
+        window.speechSynthesis.speak = (u: SpeechSynthesisUtterance): void => void w.said.push([u.text, u.lang]);
+    });
+    const said = (): Promise<string[][]> => win.evaluate(() => (window as unknown as { said: string[][] }).said);
+    await win.getByRole("button", { name: "Study 10" }).click();
+
+    await win.locator(`${card} .flashy-front .flashy-speak`).click();
+    await expect.poll(said).toEqual([["la cuchara", "es"]]);
+    await expect(win.locator(card)).not.toHaveClass(/is-flipped/);
+
+    await win.keyboard.press(" ");
+    await win.keyboard.press("s");
+    await expect.poll(said).toEqual([
+        ["la cuchara", "es"],
+        ["spoon Pásame la cuchara, por favor. - Pass me the spoon, please.", "en"],
+    ]);
 });
 
 test("says so when a note has no cards", async ({ obsidian, win }) => {
