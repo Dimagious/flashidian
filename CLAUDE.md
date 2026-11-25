@@ -68,7 +68,7 @@ Decided after an architect and a marketer reviewed the options: notes with cards
 
 ## Roadmap (agreed 2026-11-25, from a look at Quizlet's set page)
 
-Done: mode tiles, front side, read aloud (0.7.x); match game (`src/core/match.ts`, fourth tile, 2x2 mode grid). Still open for match: the README GIF and a look on the iPhone. Next, in order:
+Done: mode tiles, front side, read aloud (0.7.x); match game (`src/core/match.ts`, fourth tile, 2x2 mode grid). Match checked on an iPhone with 0.8.0; still open for it: the README GIF. Next, in order:
 
 2. Hint before the flip: first letter and length of the answer (`s _ _ _ _`).
 3. Stars without touching notes: a star is a log entry; plus an automatic "Difficult" filter (cards sent left twice or more).
