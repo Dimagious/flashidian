@@ -4,6 +4,6 @@
     "strict": true, "noImplicitAny": true, "noUncheckedIndexedAccess": true, "noEmit": true,
     "skipLibCheck": true, "types": ["node", "obsidian"]
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "evals/**/*.ts"],
   "exclude": ["node_modules", "main.js"]
 }

@@ -6,3 +6,9 @@ playwright-report/
 test-results/
 .opdk/
 out/
+.eval/
+.claude/hillclimb/**/traces/
+.claude/hillclimb/**/report.html
+.claude/hillclimb/**/trajectory/
+.claude/hillclimb/**/progress.txt
+.claude/hillclimb/**/pilot.md

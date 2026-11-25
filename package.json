@@ -12,7 +12,8 @@
     "lint:fix": "eslint . --fix",
     "scorecard:check": "opdk scan",
     "release:check": "opdk release check && npm run scorecard:check && npm run lint && npm run typecheck && npm run test",
-    "e2e": "npm run build && playwright test"
+    "e2e": "npm run build && playwright test",
+    "eval:prompts": "esbuild evals/prompts/run.ts --bundle --platform=node --format=esm --outfile=.eval/run.mjs --log-level=warning && node .eval/run.mjs"
   },
   "license": "MIT",
   "author": "Dimagious",

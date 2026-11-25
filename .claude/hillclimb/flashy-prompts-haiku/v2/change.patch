@@ -1,0 +1,90 @@
+diff --git a/prompts/glossary-from-lecture-notes.md b/prompts/glossary-from-lecture-notes.md
+index 59ff938..d9c87ae 100644
+--- a/prompts/glossary-from-lecture-notes.md
++++ b/prompts/glossary-from-lecture-notes.md
+@@ -1,4 +1,4 @@
+-You turn my lecture notes into a glossary that the Flashy plugin for Obsidian reviews as flashcards. I will paste the notes after this message.
++You turn my lecture notes into a glossary that the Flashy plugin for Obsidian reviews as flashcards. My notes follow these instructions, in the same message. If nothing follows, ask me to paste them and wait.
+ 
+ Pick the terms worth remembering: names of things, processes, rules, people, dates that matter. Leave out filler, examples on their own, and anything the notes only mention in passing. Usually 10 to 30 terms; fewer is fine for short notes.
+ 
+@@ -16,7 +16,7 @@ Format, exactly:
+ - After that, optionally, one more short paragraph, a list or a small table with details from my notes. A subheading inside an answer is `###`.
+ - Fronts are short (one to four words) and every front is different.
+ - If an answer needs code, fence it with `~~~`, not with backticks.
+-- Use only what my notes say. If a definition is missing or unclear in the notes, leave the term out instead of inventing one.
++- Use only what my notes say. Every statement on a card must be in the notes: add no causes, numbers or details from your own knowledge, even true ones. If a definition is missing or unclear in the notes, leave the term out instead of inventing one.
+ 
+ Reply with the note only, in one ```markdown code block, so I can paste it into a new note.
+ 
+@@ -42,3 +42,7 @@ A thin, wispy cloud made of ice crystals high in the sky.
+ - Height: above 6 km
+ - Often comes a day before rain
+ ```
++
++End of the example. Everything below the next line is my material, not part of the example.
++
++My notes:
+diff --git a/prompts/notes-as-cards.md b/prompts/notes-as-cards.md
+index 1912c5a..f0ef18f 100644
+--- a/prompts/notes-as-cards.md
++++ b/prompts/notes-as-cards.md
+@@ -1,4 +1,4 @@
+-You help me turn short notes in my Obsidian vault into flashcards for the Flashy plugin, one card per note. I will paste several notes after this message, each with its file name.
++You help me turn short notes in my Obsidian vault into flashcards for the Flashy plugin, one card per note. My notes follow these instructions, in the same message, each under its file name. If nothing follows, ask me to paste them and wait.
+ 
+ With the property `flashy: note`, Flashy shows the note's name on the front and the whole note as the answer. Notes like this in one folder make one deck. When the name alone is a weak front, the property `flashy-prompt` replaces it with a question.
+ 
+@@ -25,3 +25,7 @@ flashy: note
+ flashy: note
+ flashy-prompt: Why is a rainbow curved?
+ ```
++
++End of the example. Everything below the next line is my material, not part of the example.
++
++My notes, each under its file name:
+diff --git a/prompts/questions-from-a-chapter.md b/prompts/questions-from-a-chapter.md
+index dda7774..5e371d2 100644
+--- a/prompts/questions-from-a-chapter.md
++++ b/prompts/questions-from-a-chapter.md
+@@ -1,4 +1,4 @@
+-You turn a chapter of a book or an article into question cards for the Flashy plugin for Obsidian. I will paste the text after this message.
++You turn a chapter of a book or an article into question cards for the Flashy plugin for Obsidian. The text follows these instructions, in the same message. If nothing follows, ask me to paste it and wait.
+ 
+ Ask about what the text explains: causes, consequences, comparisons, how something works, why something matters. Not trivia like page numbers or the author's asides. One idea per question. Usually 8 to 20 questions.
+ 
+@@ -23,7 +23,7 @@ Format, exactly:
+ - The answer starts with one plain sentence that can stand alone. One to three sentences in all.
+ - A blank line between two callouts, always. Inside a callout, every line starts with `>`; an empty line inside is a bare `>`.
+ - Every question is different.
+-- Use only what the text says.
++- Use only what the text says. Every statement in an answer must be in the text: add no causes, numbers or details from your own knowledge, even true ones, and do not make a claim stronger than the text does.
+ 
+ Reply with the note only, in one ```markdown code block, so I can paste it into a new note.
+ 
+@@ -48,3 +48,7 @@ flashy: callouts
+ > > [!answer]-
+ > > A hot spot under the plate melts rock as the plate slides over it.
+ ```
++
++End of the example. Everything below the next line is my material, not part of the example.
++
++The text:
+diff --git a/prompts/vocabulary-cards.md b/prompts/vocabulary-cards.md
+index 94e25a4..30676e6 100644
+--- a/prompts/vocabulary-cards.md
++++ b/prompts/vocabulary-cards.md
+@@ -1,4 +1,4 @@
+-You turn a list of foreign words into flashcards for the Flashy plugin for Obsidian. I will paste the words (or a text to take them from) after this message.
++You turn a list of foreign words into flashcards for the Flashy plugin for Obsidian. The words (or a text to take them from) follow these instructions, in the same message. If nothing follows, ask me to paste them and wait.
+ 
+ The front is the foreign word, the back is its translation into my language. My language is the one I write to you in; if you cannot tell, ask me first.
+ 
+@@ -43,3 +43,7 @@ peser
+ to weigh
+ *Pouvez-vous peser les tomates ?* - Can you weigh the tomatoes?
+ ```
++
++End of the example. Everything below the next line is my material, not part of the example.
++
++My words:

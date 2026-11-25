@@ -1,0 +1,60 @@
+{
+  "schema": "hillclimb/v2",
+  "metrics": [
+    {
+      "id": "valid",
+      "label": "Parses",
+      "kind": "binary"
+    },
+    {
+      "id": "faithful",
+      "label": "Faithful",
+      "kind": "binary"
+    },
+    {
+      "id": "focused",
+      "label": "Focused",
+      "kind": "binary"
+    },
+    {
+      "id": "lang",
+      "label": "Language",
+      "kind": "binary"
+    },
+    {
+      "id": "clean",
+      "label": "No junk",
+      "kind": "binary"
+    },
+    {
+      "id": "coverage",
+      "label": "Coverage",
+      "kind": "float",
+      "scale": 1
+    },
+    {
+      "id": "cards",
+      "label": "Cards",
+      "kind": "float",
+      "scale": 40
+    }
+  ],
+  "perf_fields": [
+    {
+      "id": "latency_s",
+      "label": "Latency",
+      "unit": "s"
+    },
+    {
+      "id": "out_tokens",
+      "label": "Out tokens"
+    },
+    {
+      "id": "cost_usd",
+      "label": "Cost",
+      "unit": "$"
+    }
+  ],
+  "variants": [],
+  "examples": []
+}
