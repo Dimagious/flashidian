@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-25
+
 ### Fixed
 
 - Read aloud on iPhone: a full language tag (`en-US`, not `en`) and no cancel right before speaking, which iOS answered with silence. When reading does not start, a notice says so and points at silent mode.
