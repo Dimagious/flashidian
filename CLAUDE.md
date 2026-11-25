@@ -33,39 +33,39 @@ npm run capture                                                   # README films
 npx opdk release patch --dry-run                                 # cut a release; push all commits first
 ```
 
+## Maker and checker
+
+Every feature or bug fix that changes code goes through the kit's `maker` (Sonnet) and `checker` (Opus) agents: `.claude/agents/opdk -> node_modules/obsidian-plugin-dev-kit/claude/agents`. Both read this section, and the files it points to, as binding. The main session writes no code: it briefs the maker, passes the reports on, and shows the final verdict and diff. The loop repeats until APPROVE. Without the agents: typos, docs, comments, `.claude/**` files, or when Dmitriy asks for it.
+
+Flashy-specific rules for both agents:
+
+- **Layers.** `src/core` is pure (no `obsidian` imports, no DOM) and carries the 90 percent coverage gate. Vault I/O lives in `src/app`. `src/ui` is covered by e2e, not by the unit gate, so a UI change states what the e2e run must show.
+- **Notes with cards are never written to.** Progress goes only to the `Flashy/` folder ([ADR 0001](.claude/brain/decisions/0001-progress-storage.md)). Any write to a card note is REJECT.
+- **Card keys and the log format are a contract.** A change to front normalization, `key`, the log line or replay loses history for existing users: it needs a migration and a test that replays an old log. Replay stays deterministic (no FSRS fuzz, no short-term steps).
+- **Strings** go into all seven `src/i18n/<lang>.ts` files (see Rules below).
+- **Prompts** in `prompts/`: the example must still parse (`src/core/prompts.test.ts`). A new eval variant is Dmitriy's run, not an agent's ([prompts eval](.claude/brain/prompts-eval.md)).
+- **Extra gates:** none beyond the kit's five; `npm run typecheck` already covers `tsconfig.evals.json`.
+- **Checker lenses.** Trace a grade from the swipe to the device log and back through replay. Trace a note from `build()` to cards: headings, tables, lists, question callouts, `?` blocks, whole notes. Check the card faces against the WebKit traps below. Under "Not verifiable locally": the e2e run (phone layout, the legend on one line per language) and a look on an iPhone for anything visual on the card faces.
+
 ## Rules that cost us something
 
-- Card motion goes through CSS variables (`--flashy-x`, `--flashy-y`, `--flashy-r`, `--flashy-keep`, `--flashy-repeat`) set with `setCssProps`; the scanner rejects `el.style.*` assignments.
-- No `backdrop-filter` and no pseudo-elements on the card faces: both break `backface-visibility` in WebKit (iOS).
+- Card motion goes through CSS variables (`--flashy-x`, `--flashy-y`, `--flashy-r`, `--flashy-keep`, `--flashy-repeat`) set with `setCssProps`.
+- No `backdrop-filter` and no pseudo-elements on the card faces: both break `backface-visibility` in WebKit (iOS). e2e runs in Chromium, the iPhone in WebKit: anything visual on the card faces (3D flip, backface, layered children) needs a look on the phone before calling it done.
 - The modal carries `data-ignore-swipe`, otherwise Obsidian mobile opens a sidebar on a horizontal swipe. Checked on an iPhone with 0.1.1: swipes no longer open the sidebars.
 - On the back, a mostly vertical first move releases the pointer so a long answer scrolls (`touch-action: pan-y` on a flipped card).
 - Phone fonts are larger: the three labelled buttons hide their icons under `.is-phone`, or "Answer" is clipped at 390 px.
 - Obsidian's close button sits under the iPhone status bar in a full-screen modal and the desktop emulation does not show it. Flashy hides it (`.modal-close-button` on desktop, `.modal-header-button` on mobile) and draws its own in `.flashy-top` with the safe-area inset.
 - Obsidian renders a code block twice in a tab: in the reading view and in the hidden editor. e2e locators scope to `.markdown-reading-view`. `DecksBlock` numbers its renders so a redraw that starts while another awaits does not double the rows.
 - `ProgressStore.load()` keeps what the session already knows: right after `vault.create` the cache can serve the old log.
+- `build()` reads properties from the note's text (`getFrontMatterInfo` + `parseYaml`), not from the metadata cache: a deck list drawn while Obsidian still indexes (startup, a sync) missed `flashy:` decks. Seen as a flaky row count in e2e.
 - `checkLayout()` returns nothing and throws on problems (overflow, touch targets under 44 px).
-- Timers and animation frames through `window` (`window.setTimeout`, `window.requestAnimationFrame`): the community directory scanner warns on `activeWindow.requestAnimationFrame`, and the kit lint does not catch it. DOM through `activeDocument` (popout windows).
+- Quiz terms go through `plainTerm`: strip bold and code marks only. Stripping every `_` turned `stop_reason` into `stopreason` (caught by e2e).
+- The quiz hides a card's term in its own answer only when the answer is a sentence (more than three words): a short answer is a name, and "Mexico City" masked as "___ City" read as a bug. A definition-first card masks its term with the same rule.
+- Front side (`term`, `definition`, `mixed`) lives in settings and is switched on the deck screen through `ReviewPrefs`. Speech is the Web Speech API (`speechSynthesis`), no network: the term side takes `flashy-lang`, an answer is guessed (Cyrillic means ru, else en). Only the top card shows its speaker: stacked cards are scaled below the 44 px touch target.
+- Match's clock redraws every 100 ms, so e2e `settle` watches `.flashy-match`, not the modal.
 - Every user-visible string lives in `src/i18n/<lang>.ts`. A new string goes into all seven files; `locales.test.ts` fails on a missing key, an empty text, a lost name (Flashy, Quizlet, `folder:`) or a long text left in English. Default language: Obsidian's (`setLanguage("auto", getLanguage())`), English when unsupported; command names change only after a restart.
 - The swipe legend under the card must stay one line in every language: a second line hides behind the card, and `checkLayout` does not see it. The phone test per language measures it.
 - No em dashes anywhere (code, copy, docs). Commits are authored by the developer only, no Claude trailers.
-
-## Progress storage (ADR, 2026-11-24)
-
-Decided after an architect and a marketer reviewed the options: notes with cards are never written to (SR's issue #162: users hate scheduling data in notes); `data.json` and hidden folders are out because Obsidian Sync does not sync them by default. So: a visible folder (`Flashy/`, configurable), one append-only `log-<device>.md` per device (single writer, no sync conflicts, Decks does the same), state replayed with ts-fsrs (no fuzz, no short-term steps, so every device computes the same dates), and `Flashy/<deck>.md` with derived numbers as properties (safe to lose in a conflict; the one exception is the match best time, `flashy-match-best`, which a conflict can lose for good, accepted as a game score). Device id in `app.saveLocalStorage`, which no sync copies.
-
-- Card key: cyrb53 of the normalized front, `-2`, `-3` for repeats in one note; the path is not part of it. A card without history takes over an orphaned key with the same answer hash, and keeps logging under that old key (`CardState.key`).
-- Reviews are batched: flushed at the end of a round, on close and 15 s after the last grade. Undo takes back an unwritten review only.
-- Practice rounds (the cards sent left, again) write nothing.
-- Undo of a written review appends rating 0 with the cancelled review's time in the last field; replay skips both on every device.
-- Quiz terms go through `plainTerm`: strip bold and code marks only. Stripping every `_` turned `stop_reason` into `stopreason` (caught by e2e).
-- No regex lookbehind anywhere: iOS before 16.4 cannot parse it, and `obsidianmd/regex-lookbehind` fails the lint.
-
-- The quiz hides a card's term in its own answer only when the answer is a sentence (more than three words): a short answer is a name, and "Mexico City" masked as "___ City" read as a bug.
-
-- A deck (`Deck` in `app/progress.ts`) is a note, or a folder of `flashy: note` notes: one row in the deck list, one summary note (`Flashy/<folder> (notes).md`, so a folder note `Biology/Biology.md` keeps its own). A note-card's front gets its folder when the file name is not unique in the whole vault, so its key does not depend on which notes a review takes.
-- `build()` reads properties from the note's text (`getFrontMatterInfo` + `parseYaml`), not from the metadata cache: a deck list drawn while Obsidian still indexes (startup, a sync) missed `flashy:` decks. Seen as a flaky row count in e2e.
-- Match keeps its best time as `flashy-match-best` (seconds) in `Flashy/<deck>.md`: `writeSummary` sets only its own keys, so it survives. Only a review of one deck has a best; nothing goes to the review log. Its clock redraws every 100 ms, so e2e `settle` watches `.flashy-match`, not the modal.
-- Front side (`term`, `definition`, `mixed`) lives in settings and is switched on the deck screen through `ReviewPrefs`; a definition-first card masks its term with the same rule as the quiz. Speech is the Web Speech API (`speechSynthesis`), no network: the term side takes `flashy-lang`, an answer is guessed (Cyrillic means ru, else en). Only the top card shows its speaker: stacked cards are scaled below the 44 px touch target.
 
 ## Seed vault: the base of tests and demos
 
@@ -74,28 +74,8 @@ Decided after an architect and a marketer reviewed the options: notes with cards
 - `src/core/seed.test.ts` keeps it usable: card counts, unique keys, four options per question in both quiz directions, no term leaking into a sentence. Change a deck, update the counts there and in `e2e/review.spec.ts`.
 - `e2e/history.ts` `demoHistory(now)` writes a review log dated back from `now` (per five cards: one new, one missed yesterday, three learned). Seed it with `test.use({ seed: { files: { "Flashy/log-demo.md": demoHistory(new Date()) } } })` for a deck in use; a film pairs it with `demo.freezeTime`.
 
-## Roadmap (agreed 2026-11-25, from a look at Quizlet's set page)
+## Decisions, plans, eval
 
-Done: mode tiles, front side, read aloud (0.7.x); match game (`src/core/match.ts`, fourth tile, 2x2 mode grid). Match checked on an iPhone with 0.8.0; still open for it: the README GIF. Next, in order:
-
-2. Hint before the flip: first letter and length of the answer (`s _ _ _ _`).
-3. Stars without touching notes: a star is a log entry; plus an automatic "Difficult" filter (cards sent left twice or more).
-4. Keyboard help on `?` in a round.
-5. Later: type the answer with fuzzy matching for short answers; autoplay with speech; catalog prep (`opdk demo` films on the seed vault with `demoHistory`, listing stills); replay cache for big logs.
-
-Not taken from Quizlet: print, embed, merge, copy (Obsidian does these), calendar (the deck block does it), study with friends and live games (need a server), ads.
-
-Testing note: e2e runs in Chromium (Obsidian desktop); the iPhone runs WebKit. Anything visual on the card faces (3D flip, backface, layered children) needs a look on the phone before calling it done.
-
-## Prompts and their eval (2026-11-25)
-
-No generation inside the plugin (no keys, no model calls): it ships prompts the user pastes into their own assistant. `evals/prompts/` checks them: 24 synthetic cases (6 per prompt, en and ru), each reply parsed by the real parsers, plus a judge for faithfulness and focus.
-
-- `npm run eval:prompts -- --flow .claude/hillclimb/flashy-prompts-<sonnet|haiku> --variant vN --model claude-<sonnet|haiku>-5-5 --reps 2`. A changed harness (runner, grader, prompts) needs `--approve-harness`, passed by Dmitriy, not by an agent. `baseline` runs `evals/prompts/variants/baseline/`, every other variant runs `prompts/`. Reports: the lite builder from the claude-api skill, `report.html` in each flow (gitignored).
-- What the eval taught: a prompt must end with an explicit line before the pasted material; the note example had the same `### File.md` shape as the notes, and the small model took the notes for more example. "No details from your own knowledge, even true ones" stopped invented causes in answers.
-- Change a prompt: the example in it must still parse (`src/core/prompts.test.ts`), then a new variant on both models.
-- The community scanner reads every tracked file and only `tsconfig.json`: a Node script inside `tsconfig.json` costs scorecard points, so `evals/` has its own tsconfig.
-
-## Not built yet
-
-Replay cache and log snapshots (logs are replayed in full on every open; fine for thousands of reviews).
+- Progress storage: [ADR 0001](.claude/brain/decisions/0001-progress-storage.md).
+- Roadmap and open work: [backlog](.claude/brain/backlog.md).
+- Prompts eval (how to run it, what it taught): [prompts-eval](.claude/brain/prompts-eval.md).
