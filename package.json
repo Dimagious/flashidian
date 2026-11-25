@@ -19,10 +19,10 @@
   "license": "MIT",
   "author": "Dimagious",
   "devDependencies": {
-    "@playwright/test": "^1.65.0",
-    "@types/node": "^22.20.5",
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^26.6.6",
     "@vitest/coverage-v8": "^5.1.1",
-    "electron": "^44.10.2",
+    "electron": "^44.11.5",
     "eslint": "^10.15.0",
     "obsidian": "^1.14.4",
     "obsidian-plugin-dev-kit": "0.6.0",
