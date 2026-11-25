@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.11.2] - 2026-11-25
+
 ### Fixed
 
 - Animation frames go through `window`, as the community directory's review asks.
