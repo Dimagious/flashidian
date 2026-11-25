@@ -53,6 +53,9 @@ const en = {
     sideMixed: "Mixed",
     setSideDesc: "What a card shows first. Definition asks for the term from its answer; the schedule is the same.",
     speak: "Read aloud (S)",
+    speakFailed: (lang: string, error: string): string => `Could not read aloud in ${lang}: ${error}.`,
+    speakSilent: (lang: string): string =>
+        `Reading aloud did not start (${lang}). On an iPhone, turn off silent mode; check that the system has a voice for this language.`,
     quizReverseStart: (n: number): string => `Reverse quiz: ${n} terms`,
     quizAskReverse: "which definition fits?",
     quizNext: "Next",
@@ -125,6 +128,8 @@ const ru: Strings = {
     sideMixed: "Вперемешку",
     setSideDesc: "Что карточка показывает первым. «Определение» просит вспомнить термин по ответу, расписание то же.",
     speak: "Прочитать вслух (S)",
+    speakFailed: (lang, error) => `Не получилось прочитать вслух (${lang}): ${error}.`,
+    speakSilent: (lang) => `Озвучка не началась (${lang}). На iPhone выключи беззвучный режим и проверь, что в системе есть голос для этого языка.`,
     quizReverseStart: (n) => `Обратный тест: ${n} терминов`,
     quizAskReverse: "какое определение подходит?",
     quizNext: "Дальше",

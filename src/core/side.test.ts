@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { answerAsFront, answerFirst, isSide, speechLang, speechText } from "./side";
+import { answerAsFront, answerFirst, isSide, pickVoice, speechLang, speechLocale, speechText } from "./side";
 
 describe("side", () => {
     it("knows the three sides", () => {
@@ -35,5 +35,22 @@ describe("speech", () => {
         expect(speechLang("la cuchara", " ")).toBe("en");
         expect(speechLang("Ядро клетки")).toBe("ru");
         expect(speechLang("Nucleus")).toBe("en");
+    });
+});
+
+describe("voices", () => {
+    it("gives a bare code a region, keeps a full tag", () => {
+        expect(speechLocale("en")).toBe("en-US");
+        expect(speechLocale("ES")).toBe("es-ES");
+        expect(speechLocale("pt_PT")).toBe("pt-PT");
+        expect(speechLocale("xx")).toBe("xx");
+    });
+
+    it("picks the exact voice, else one of the same language, else none", () => {
+        const voices = [{ lang: "en-GB" }, { lang: "es_MX" }, { lang: "es-ES" }];
+        expect(pickVoice(voices, "es-ES")).toBe(voices[2]);
+        expect(pickVoice(voices, "en-US")).toBe(voices[0]);
+        expect(pickVoice(voices, "es-MX")).toBe(voices[1]);
+        expect(pickVoice(voices, "ru-RU")).toBeUndefined();
     });
 });

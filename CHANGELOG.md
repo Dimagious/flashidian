@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Read aloud on iPhone: a full language tag (`en-US`, not `en`) and no cancel right before speaking, which iOS answered with silence. When reading does not start, a notice says so and points at silent mode.
+- The speaker stays in the top right corner after the card turns over.
+
 ## [0.7.0] - 2026-11-25
 
 ### Added

@@ -40,3 +40,23 @@ export function speechLang(text: string, declared?: string): string {
     if (declared?.trim()) return declared.trim();
     return /[Ѐ-ӿ]/.test(text) ? "ru" : "en";
 }
+
+const REGIONS: Record<string, string> = {
+    en: "en-US", ru: "ru-RU", es: "es-ES", de: "de-DE", fr: "fr-FR", it: "it-IT", pt: "pt-BR",
+    ja: "ja-JP", zh: "zh-CN", ko: "ko-KR", nl: "nl-NL", pl: "pl-PL", tr: "tr-TR", uk: "uk-UA",
+};
+
+/** A full tag for a bare language code: iOS speaks `en-US` but may stay silent on `en`. A tag with a region is kept. */
+export function speechLocale(lang: string): string {
+    const l = lang.trim().replace("_", "-");
+    if (l.includes("-")) return l;
+    return REGIONS[l.toLowerCase()] ?? l;
+}
+
+/** The voice for a tag: the exact one, else any of the same language. */
+export function pickVoice<V extends { lang: string }>(voices: readonly V[], tag: string): V | undefined {
+    const want = tag.toLowerCase().replace("_", "-");
+    const base = want.split("-")[0] ?? want;
+    const norm = (v: V): string => v.lang.toLowerCase().replace("_", "-");
+    return voices.find((v) => norm(v) === want) ?? voices.find((v) => norm(v).split("-")[0] === base);
+}

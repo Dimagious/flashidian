@@ -1,7 +1,7 @@
-import { type App, Component, getLanguage, MarkdownRenderer, Modal, setIcon } from "obsidian";
+import { type App, Component, getLanguage, MarkdownRenderer, Modal, Notice, setIcon } from "obsidian";
 import type { DeckCard, DeckProgress } from "../app/progress";
 import { buildQuiz, type Question } from "../core/quiz";
-import { answerAsFront, answerFirst, SIDES, type Side, speechLang, speechText } from "../core/side";
+import { answerAsFront, answerFirst, pickVoice, SIDES, type Side, speechLang, speechLocale, speechText } from "../core/side";
 import { type Grade, Session, shuffle } from "../core/session";
 import { type Strings, strings } from "./strings";
 
@@ -390,6 +390,7 @@ export class ReviewModal extends Modal {
         front.createDiv({ cls: "flashy-deck", text: item.deck });
         const back = flipper.createDiv({ cls: "flashy-face flashy-back" });
         const scroll = back.createDiv({ cls: "flashy-scroll markdown-rendered" });
+        if (this.synth) scroll.createDiv({ cls: "flashy-speak-gap" });
         if (flipped) {
             // The answer asks, with the term hidden in it; the back names the term above the whole answer.
             const prompt = answerAsFront(term, answer);
@@ -427,12 +428,25 @@ export class ReviewModal extends Modal {
         const said = this.speech.get(el)?.[face];
         if (!this.synth || !said?.[0]) return;
         const [text, lang] = said;
-        this.synth.cancel();
+        const synth = this.synth;
+        // iOS drops an utterance queued right after cancel(), so cancel only what is still talking.
+        if (synth.speaking || synth.pending) synth.cancel();
+        const tag = speechLocale(lang);
         const u = new SpeechSynthesisUtterance(text);
-        u.lang = lang;
-        const voice = this.synth.getVoices().find((v) => v.lang.toLowerCase().startsWith(lang.toLowerCase()));
+        u.lang = tag;
+        const voice = pickVoice(synth.getVoices(), tag);
         if (voice) u.voice = voice;
-        this.synth.speak(u);
+        let started = false;
+        u.onstart = (): void => void (started = true);
+        u.onerror = (e): void => {
+            started = true;
+            if (e.error !== "interrupted" && e.error !== "canceled") new Notice(this.t.speakFailed(tag, e.error));
+        };
+        synth.speak(u);
+        // A voice that never starts says nothing at all; tell the reader instead of leaving a dead button.
+        window.setTimeout(() => {
+            if (!started && !synth.speaking) new Notice(this.t.speakSilent(tag));
+        }, 2500);
     }
 
     private speakTop(): void {

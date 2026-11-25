@@ -1008,12 +1008,16 @@
 }
 
 .flashy-back .flashy-speak {
+    top: var(--size-4-3);
     right: var(--size-4-3);
-    bottom: var(--size-4-3);
 }
 
-.flashy-back .flashy-scroll {
-    padding-bottom: 60px;
+/* Room for the speaker in the top right corner of the back: the first lines of the answer wrap around it. */
+.flashy-speak-gap {
+    float: right;
+    width: 36px;
+    height: 32px;
+    margin: 0 calc(var(--size-4-2) * -1) var(--size-4-1) var(--size-4-2);
 }
 
 .is-phone .flashy-speak {

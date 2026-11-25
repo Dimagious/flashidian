@@ -128,14 +128,14 @@ test("a card reads itself aloud: the term in the deck's language, the answer in 
     await win.getByRole("button", { name: "Study 10" }).click();
 
     await win.locator(`${card} .flashy-front .flashy-speak`).click();
-    await expect.poll(said).toEqual([["la cuchara", "es"]]);
+    await expect.poll(said).toEqual([["la cuchara", "es-ES"]]);
     await expect(win.locator(card)).not.toHaveClass(/is-flipped/);
 
     await win.keyboard.press(" ");
     await win.keyboard.press("s");
     await expect.poll(said).toEqual([
-        ["la cuchara", "es"],
-        ["spoon Pásame la cuchara, por favor. - Pass me the spoon, please.", "en"],
+        ["la cuchara", "es-ES"],
+        ["spoon Pásame la cuchara, por favor. - Pass me the spoon, please.", "en-US"],
     ]);
 });
 
