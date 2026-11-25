@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-25
+
 ### Added
 
 - Match: a fourth tile on the deck screen. Six cards become twelve tiles, terms and definitions shuffled together; tap pairs against the clock. The best time of a deck lands in its progress note (`flashy-match-best`). Match writes nothing to the review log. The deck screen shows its four modes in a 2 by 2 grid.
