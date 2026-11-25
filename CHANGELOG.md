@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-25
+
 ### Added
 
 - Reverse quiz: the term is the question, four short definitions are the options, each with its own term hidden. Retrying the missed keeps the direction.
