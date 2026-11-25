@@ -1,6 +1,6 @@
 {
   "name": "flashidian",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "private": true,
   "description": "Flashcards for Obsidian with a 3D flip and swipe grading.",
   "scripts": {

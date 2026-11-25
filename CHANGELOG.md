@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-25
+
 ### Added
 
 - Seven languages: English, Russian, Spanish, German, French, Portuguese (Brazil) and Japanese. Flashy follows Obsidian's language by default and falls back to English; the *Language* setting picks another.
