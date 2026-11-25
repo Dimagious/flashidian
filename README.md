@@ -93,6 +93,10 @@ Or start from the command palette and the file explorer:
 
 During a review: tap or Space to flip, swipe or the arrow keys to grade, Backspace to undo the last card (also after it was written to the log). At the end of a round Flashy offers the cards you sent left as a practice round, which does not change the schedule.
 
+## Seven languages
+
+Screens, settings, commands and messages follow Obsidian's language: English, Russian, Spanish, German, French, Portuguese (Brazil) and Japanese, with English for any other. To use another one, pick it under *Language* in the settings. Your cards stay in the language you wrote them in.
+
 ## License
 
 MIT

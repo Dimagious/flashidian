@@ -1,4 +1,4 @@
-import { type App, FuzzySuggestModal, getFrontMatterInfo, Notice, parseYaml, Plugin, TFile, TFolder, type TAbstractFile } from "obsidian";
+import { type App, FuzzySuggestModal, getFrontMatterInfo, getLanguage, Notice, parseYaml, Plugin, TFile, TFolder, type TAbstractFile } from "obsidian";
 import { type Deck, type DeckCard, DeckProgress } from "./app/progress";
 import { DEFAULTS, FlashySettingTab, type FlashySettings } from "./app/settings";
 import { ProgressStore } from "./app/store";
@@ -10,16 +10,18 @@ import { DecksBlock, parseBlock } from "./ui/decks-block";
 import { PasteModal } from "./ui/paste";
 import { PromptPicker } from "./ui/prompts";
 import { ReviewModal, type ReviewPrefs } from "./ui/review";
-import { strings } from "./ui/strings";
+import { isLangChoice, setLanguage, strings } from "./i18n";
 
 export default class FlashyPlugin extends Plugin {
     settings: FlashySettings = { ...DEFAULTS };
     private store!: ProgressStore;
 
     async onload(): Promise<void> {
-        const t = strings();
         this.settings = { ...DEFAULTS, ...((await this.loadData()) as Partial<FlashySettings> | null) };
         if (!isSide(this.settings.side)) this.settings.side = DEFAULTS.side;
+        if (!isLangChoice(this.settings.language)) this.settings.language = DEFAULTS.language;
+        setLanguage(this.settings.language, getLanguage());
+        const t = strings();
         this.store = new ProgressStore(this.app, () => this.settings.folder);
         this.addSettingTab(new FlashySettingTab(this.app, this));
 

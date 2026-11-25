@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- Seven languages: English, Russian, Spanish, German, French, Portuguese (Brazil) and Japanese. Flashy follows Obsidian's language by default and falls back to English; the *Language* setting picks another.
+
+### Changed
+
+- The notice after copying a prompt says where the material goes: right under the prompt's last line, in the same message.
+
 ## [0.10.0] - 2026-11-25
 
 ### Added

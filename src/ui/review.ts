@@ -1,10 +1,10 @@
-import { type App, Component, getLanguage, MarkdownRenderer, Modal, Notice, setIcon } from "obsidian";
+import { type App, Component, MarkdownRenderer, Modal, Notice, setIcon } from "obsidian";
 import type { DeckCard, DeckProgress } from "../app/progress";
 import { buildMatch, formatTime, isNewBest, tap, type Tile } from "../core/match";
 import { buildQuiz, type Question } from "../core/quiz";
 import { answerAsFront, answerFirst, pickVoice, SIDES, type Side, speechLang, speechLocale, speechText } from "../core/side";
 import { type Grade, Session, shuffle } from "../core/session";
-import { type Strings, strings } from "./strings";
+import { language, type Strings, strings } from "../i18n";
 
 const STACK = 3;
 /** Questions in one quiz round. */
@@ -243,7 +243,7 @@ export class ReviewModal extends Modal {
         };
         mark();
         const next = this.progress.nextDue();
-        if (!today.length && next) home.createDiv({ cls: "flashy-home-note", text: this.t.nextOn(next.toLocaleDateString(getLanguage(), { day: "numeric", month: "long" })) });
+        if (!today.length && next) home.createDiv({ cls: "flashy-home-note", text: this.t.nextOn(next.toLocaleDateString(language(), { day: "numeric", month: "long" })) });
     }
 
     // ---------- quiz ----------

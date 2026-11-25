@@ -3,7 +3,7 @@ import chapter from "../../prompts/questions-from-a-chapter.md";
 import glossary from "../../prompts/glossary-from-lecture-notes.md";
 import notes from "../../prompts/notes-as-cards.md";
 import vocabulary from "../../prompts/vocabulary-cards.md";
-import { type Strings, strings } from "./strings";
+import { type Strings, strings } from "../i18n";
 
 /**
  * The prompts from `prompts/`, bundled as text: a user copies one, pastes it into an assistant with their material, and

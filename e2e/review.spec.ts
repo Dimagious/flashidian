@@ -203,6 +203,38 @@ test("fits the phone layout", async ({ obsidian, win }) => {
     await win.screenshot({ path: ".e2e/phone-back.png" });
 });
 
+for (const lang of ["ru", "de", "fr", "es", "pt", "ja"]) {
+    test(`fits the phone in ${lang}: the deck screen and a flipped card`, async ({ obsidian, win }) => {
+        await obsidian.evaluate(async (app: App, code: string) => {
+            const plugins = (app as unknown as {
+                plugins: { plugins: Record<string, { settings: { language: string }; saveSettings: () => Promise<void> }>; disablePlugin: (id: string) => Promise<void>; enablePlugin: (id: string) => Promise<void> };
+            }).plugins;
+            const flashy = plugins.plugins.flashidian!;
+            flashy.settings.language = code;
+            await flashy.saveSettings();
+            await plugins.disablePlugin("flashidian");
+            await plugins.enablePlugin("flashidian");
+        }, lang);
+        await obsidian.mobile();
+        await obsidian.openFile(SPANISH, { mode: "preview" });
+        await obsidian.runCommand("flashidian:review-note");
+        await obsidian.settle({ root: ".flashy-modal" });
+        await obsidian.checkLayout({ root: ".flashy-modal" });
+        await win.screenshot({ path: `.e2e/phone-deck-${lang}.png` });
+        await win.locator(".flashy-home .mod-cta").click();
+        await obsidian.settle({ root: ".flashy-modal" });
+        await win.locator(card).click();
+        await win.waitForTimeout(800);
+        await obsidian.checkLayout({ root: ".flashy-modal" });
+        // The swipe legend sits under the card in one line; a second line hides behind the card.
+        const legend = await win.locator(".flashy-legend span").evaluateAll((els) =>
+            els.map((el) => el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight || "16")),
+        );
+        expect(legend.every((lines) => lines < 1.5), `legend lines: ${legend.join(", ")}`).toBe(true);
+        await win.screenshot({ path: `.e2e/phone-${lang}.png` });
+    });
+}
+
 test("a deck list in a note starts a review with one tap and redraws after it", async ({ obsidian, win }) => {
     await obsidian.openFile("Study.md", { mode: "preview" });
     // Obsidian also renders the block in the hidden editor of the tab; the reading view is the one on screen.

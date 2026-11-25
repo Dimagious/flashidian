@@ -1,7 +1,7 @@
 import { type App, MarkdownRenderChild, normalizePath, setIcon, type TFile, TFolder } from "obsidian";
 import type { DeckProgress } from "../app/progress";
 import { ReviewModal, type ReviewPrefs } from "./review";
-import { strings } from "./strings";
+import { strings } from "../i18n";
 
 /** What the plugin lends the block: reading the logs once, building a review from notes, the notes of a folder. */
 export interface DeckSource {

@@ -1,6 +1,6 @@
 import { type App, Modal, normalizePath, Notice, Setting, type TFolder } from "obsidian";
 import { deckNote, parsePasted } from "../core/paste";
-import { strings } from "./strings";
+import { strings } from "../i18n";
 
 /** Paste terms and definitions from Quizlet, a spreadsheet, a CSV or a list; get a deck note in `folder`. */
 export class PasteModal extends Modal {

@@ -13,7 +13,8 @@ Name vs id: `name` must not resemble "Obsidian" (catalog review). So `id` and re
 ```
 src/core   pure: parse (the `?` format), structured (cards from headings, tables, lists, question callouts in notes with a `flashy` property; a whole note as one card), paste (Quizlet, TSV, CSV, list text into pairs), quiz (gist of an answer, masking, multiple choice), session (one round), key (card identity), log (review log format), schedule (FSRS replay, stats, today's queue). Carries the 90 percent coverage gate.
 src/app    store (vault I/O: device log, summaries), progress (cards of one review bound to the store), settings (declarative tab)
-src/ui     review modal (deck screen, stack, flip, drag, spring, end-of-round ring), decks-block (the `flashy` code block: deck list), strings (en, ru)
+src/ui     review modal (deck screen, stack, flip, drag, spring, end-of-round ring), decks-block (the `flashy` code block: deck list), prompts (the copy-prompt picker)
+src/i18n   one file per language (en, ru, es, de, fr, pt, ja), typed as `Strings` (from en.ts); index.ts picks the language
 src/main.ts  commands: review the current note, review a folder (picker, ribbon, folder context menu), copy a prompt
 prompts/   the prompts a user copies (bundled into main.js as text, `build.loader` in opdk.config.mjs); src/ui/prompts.ts lists them
 evals/     the prompt eval: cases, grader (Flashy's parsers + a judge), runner on `claude -p`; out of lint like e2e, typechecked by tsconfig.evals.json
@@ -43,6 +44,8 @@ npx opdk release patch --dry-run                                 # cut a release
 - `ProgressStore.load()` keeps what the session already knows: right after `vault.create` the cache can serve the old log.
 - `checkLayout()` returns nothing and throws on problems (overflow, touch targets under 44 px).
 - Timers and frames through `activeWindow`, DOM through `activeDocument` (popout windows).
+- Every user-visible string lives in `src/i18n/<lang>.ts`. A new string goes into all seven files; `locales.test.ts` fails on a missing key, an empty text, a lost name (Flashy, Quizlet, `folder:`) or a long text left in English. Default language: Obsidian's (`setLanguage("auto", getLanguage())`), English when unsupported; command names change only after a restart.
+- The swipe legend under the card must stay one line in every language: a second line hides behind the card, and `checkLayout` does not see it. The phone test per language measures it.
 - No em dashes anywhere (code, copy, docs). Commits are authored by the developer only, no Claude trailers.
 
 ## Progress storage (ADR, 2026-11-24)
