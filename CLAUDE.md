@@ -65,6 +65,20 @@ Decided after an architect and a marketer reviewed the options: notes with cards
 - `src/core/seed.test.ts` keeps it usable: card counts, unique keys, four options per question in both quiz directions, no term leaking into a sentence. Change a deck, update the counts there and in `e2e/review.spec.ts`.
 - `e2e/history.ts` `demoHistory(now)` writes a review log dated back from `now` (per five cards: one new, one missed yesterday, three learned). Seed it with `test.use({ seed: { files: { "Flashy/log-demo.md": demoHistory(new Date()) } } })` for a deck in use; a film pairs it with `demo.freezeTime`.
 
+## Roadmap (agreed 2026-11-25, from a look at Quizlet's set page)
+
+Done: mode tiles, front side, read aloud (0.7.x). Next, in order:
+
+1. Match game: a grid of 6 terms and 6 definitions (gists, as in the quiz), tap pairs, a timer and a best time per deck. Third tile on the deck screen. Writes nothing to the review log. The README GIF.
+2. Hint before the flip: first letter and length of the answer (`s _ _ _ _`).
+3. Stars without touching notes: a star is a log entry; plus an automatic "Difficult" filter (cards sent left twice or more).
+4. Keyboard help on `?` in a round.
+5. Later: type the answer with fuzzy matching for short answers; autoplay with speech; catalog prep (`opdk demo` films on the seed vault with `demoHistory`, listing stills); replay cache for big logs.
+
+Not taken from Quizlet: print, embed, merge, copy (Obsidian does these), calendar (the deck block does it), study with friends and live games (need a server), ads.
+
+Testing note: e2e runs in Chromium (Obsidian desktop); the iPhone runs WebKit. Anything visual on the card faces (3D flip, backface, layered children) needs a look on the phone before calling it done.
+
 ## Not built yet
 
-Replay cache and log snapshots (logs are replayed in full on every open; fine for thousands of reviews). Testing on a phone goes through BRAT (`Dimagious/flashidian`), so every fix the phone should see needs `opdk release patch`.
+Replay cache and log snapshots (logs are replayed in full on every open; fine for thousands of reviews).
