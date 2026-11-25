@@ -1,6 +1,7 @@
 import { type App, normalizePath, PluginSettingTab, type SettingDefinitionItem } from "obsidian";
 import { isSide, type Side } from "../core/side";
 import type FlashyPlugin from "../main";
+import { copyPrompt, RECIPES } from "../ui/prompts";
 import { strings } from "../ui/strings";
 
 export interface FlashySettings {
@@ -30,6 +31,11 @@ export class FlashySettingTab extends PluginSettingTab {
                 name: t.side,
                 desc: t.setSideDesc,
                 control: { type: "dropdown", key: "side", options: { term: t.sideTerm, definition: t.sideDefinition, mixed: t.sideMixed } },
+            },
+            {
+                type: "group",
+                heading: t.promptsHeading,
+                items: RECIPES.map((r) => ({ name: r.name(t), desc: r.desc(t), action: () => void copyPrompt(r) })),
             },
         ];
     }

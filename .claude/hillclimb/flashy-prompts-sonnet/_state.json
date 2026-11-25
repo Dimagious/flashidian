@@ -56,5 +56,6 @@
     }
   ],
   "variants": [],
-  "examples": []
+  "examples": [],
+  "harness_sha": "16c7a48984ee869a0ef7d4afe4883a6728ef1bf915c788dad89aeeb488a52b51"
 }

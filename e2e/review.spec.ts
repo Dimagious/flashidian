@@ -154,6 +154,38 @@ test("says so when a note has no cards", async ({ obsidian, win }) => {
     await expect(win.locator(".notice")).toContainText("No flashcards found");
 });
 
+test("copies a prompt for making cards: from the command and from settings, with what to do next", async ({ obsidian, win }) => {
+    // Catch the clipboard: the test checks the text, not the system clipboard.
+    await win.evaluate(() => {
+        const w = window as unknown as { copied: string[] };
+        w.copied = [];
+        navigator.clipboard.writeText = (text: string) => {
+            w.copied.push(text);
+            return Promise.resolve();
+        };
+    });
+    const copied = (): Promise<string[]> => win.evaluate(() => (window as unknown as { copied: string[] }).copied);
+
+    await obsidian.runCommand("flashidian:copy-prompt");
+    await expect(win.locator(".suggestion-item")).toHaveCount(4);
+    await win.locator(".prompt-input").fill("chapter");
+    await expect(win.locator(".suggestion-item")).toHaveCount(1);
+    await win.locator(".suggestion-item").click();
+    await expect(win.locator(".notice")).toContainText("Prompt copied");
+    const chapter = (await copied())[0] ?? "";
+    expect(chapter).toContain("flashy: callouts");
+    expect(chapter.trimEnd().endsWith("The text:")).toBe(true);
+
+    await obsidian.evaluate((app: App) => {
+        const s = (app as unknown as { setting: { open: () => void; openTabById: (id: string) => void } }).setting;
+        s.open();
+        s.openTabById("flashidian");
+    });
+    await win.locator(".setting-item", { hasText: "Foreign words into cards" }).click();
+    await expect.poll(async () => (await copied()).length).toBe(2);
+    expect((await copied())[1]).toContain("flashy-lang:");
+});
+
 test("fits the phone layout", async ({ obsidian, win }) => {
     await obsidian.mobile();
     await obsidian.openFile(SPANISH, { mode: "preview" });

@@ -6,7 +6,7 @@
   "scripts": {
     "build": "opdk build",
     "dev:vault": "opdk build --vault --watch",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.e2e.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.e2e.json --noEmit && tsc -p tsconfig.evals.json --noEmit",
     "test": "vitest run --coverage",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",

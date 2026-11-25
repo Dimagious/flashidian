@@ -8,6 +8,7 @@ import { type Card, parseCards } from "./core/parse";
 import { modeOf, noteCard, noteFront, parseStructured } from "./core/structured";
 import { DecksBlock, parseBlock } from "./ui/decks-block";
 import { PasteModal } from "./ui/paste";
+import { PromptPicker } from "./ui/prompts";
 import { ReviewModal, type ReviewPrefs } from "./ui/review";
 import { strings } from "./ui/strings";
 
@@ -47,6 +48,12 @@ export default class FlashyPlugin extends Plugin {
             id: "paste-deck",
             name: t.cmdPaste,
             callback: () => new PasteModal(this.app, this.app.workspace.getActiveFile()?.parent ?? this.app.vault.getRoot()).open(),
+        });
+
+        this.addCommand({
+            id: "copy-prompt",
+            name: t.cmdPrompt,
+            callback: () => new PromptPicker(this.app).open(),
         });
 
         this.registerMarkdownCodeBlockProcessor("flashy", (source, el, ctx) => {

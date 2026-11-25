@@ -6,6 +6,7 @@ For every note I paste:
 
 - Add `flashy: note`.
 - Add `flashy-prompt` only when the name is not a good question by itself: a name like `Golden Gate Bridge` is fine as it is, a name like `Why rainbows are curved` or `Notes on light 2` is not. The prompt is one short question in the language of the note, and the note's text must answer it.
+- The answer must be in the note's text, because the file name is not on the back of the card. Never ask a question whose answer is only the name: for `Everest.md` with a note about its height, ask "How high is Everest?", not "What is the highest mountain?".
 - Two prompts are never the same.
 - Do not change the notes themselves. If a note is empty or does not answer any question, say so instead of adding properties.
 

@@ -14,7 +14,9 @@ Name vs id: `name` must not resemble "Obsidian" (catalog review). So `id` and re
 src/core   pure: parse (the `?` format), structured (cards from headings, tables, lists, question callouts in notes with a `flashy` property; a whole note as one card), paste (Quizlet, TSV, CSV, list text into pairs), quiz (gist of an answer, masking, multiple choice), session (one round), key (card identity), log (review log format), schedule (FSRS replay, stats, today's queue). Carries the 90 percent coverage gate.
 src/app    store (vault I/O: device log, summaries), progress (cards of one review bound to the store), settings (declarative tab)
 src/ui     review modal (deck screen, stack, flip, drag, spring, end-of-round ring), decks-block (the `flashy` code block: deck list), strings (en, ru)
-src/main.ts  commands: review the current note, review a folder (picker, ribbon, folder context menu)
+src/main.ts  commands: review the current note, review a folder (picker, ribbon, folder context menu), copy a prompt
+prompts/   the prompts a user copies (bundled into main.js as text, `build.loader` in opdk.config.mjs); src/ui/prompts.ts lists them
+evals/     the prompt eval: cases, grader (Flashy's parsers + a judge), runner on `claude -p`; out of lint like e2e, typechecked by tsconfig.evals.json
 e2e/       Playwright in real Obsidian: the full review, empty note, phone layout check
 ```
 
@@ -80,6 +82,15 @@ Done: mode tiles, front side, read aloud (0.7.x); match game (`src/core/match.ts
 Not taken from Quizlet: print, embed, merge, copy (Obsidian does these), calendar (the deck block does it), study with friends and live games (need a server), ads.
 
 Testing note: e2e runs in Chromium (Obsidian desktop); the iPhone runs WebKit. Anything visual on the card faces (3D flip, backface, layered children) needs a look on the phone before calling it done.
+
+## Prompts and their eval (2026-11-25)
+
+No generation inside the plugin (no keys, no model calls): it ships prompts the user pastes into their own assistant. `evals/prompts/` checks them: 24 synthetic cases (6 per prompt, en and ru), each reply parsed by the real parsers, plus a judge for faithfulness and focus.
+
+- `npm run eval:prompts -- --flow .claude/hillclimb/flashy-prompts-<sonnet|haiku> --variant vN --model claude-<sonnet|haiku>-5-5 --reps 2`. A changed harness (runner, grader, prompts) needs `--approve-harness`, passed by Dmitriy, not by an agent. `baseline` runs `evals/prompts/variants/baseline/`, every other variant runs `prompts/`. Reports: the lite builder from the claude-api skill, `report.html` in each flow (gitignored).
+- What the eval taught: a prompt must end with an explicit line before the pasted material; the note example had the same `### File.md` shape as the notes, and the small model took the notes for more example. "No details from your own knowledge, even true ones" stopped invented causes in answers.
+- Change a prompt: the example in it must still parse (`src/core/prompts.test.ts`), then a new variant on both models.
+- The community scanner reads every tracked file and only `tsconfig.json`: a Node script inside `tsconfig.json` costs scorecard points, so `evals/` has its own tsconfig.
 
 ## Not built yet
 

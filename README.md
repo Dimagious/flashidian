@@ -42,6 +42,8 @@ A note uses one shape: headings if it has any, otherwise tables, otherwise lists
 
 **Paste a deck**: the command *Create a deck from pasted text* takes terms and definitions copied from Quizlet (Export), a spreadsheet, a CSV file or a list, and writes a deck note next to the open note.
 
+**Make cards with an assistant**: the command *Copy a prompt for making cards* (or the rows under *Make cards with an assistant* in the settings) copies a ready prompt for one kind of material: lecture notes into a glossary, foreign words into cards, a chapter into questions, short notes into one card each. Paste it into the assistant you use, paste your material below it, and put the reply into a note. Flashy calls no model and sends nothing anywhere. The prompts live in [`prompts/`](prompts/); [`evals/prompts/`](evals/prompts/) checks them on 24 sample inputs, parsing each reply with Flashy's own parsers.
+
 ## Your notes stay as you wrote them
 
 Flashy never writes into the notes with your cards. Progress lives in plain Markdown files in a `Flashy/` folder of your vault (the folder can be changed in settings), so it syncs with Obsidian Sync, iCloud or anything else that syncs notes, and survives reinstalling the plugin:
