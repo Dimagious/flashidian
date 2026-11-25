@@ -54,10 +54,13 @@ function plainText(text: string): string {
         .replace(/(^|\W)[*_]([^*_]+)[*_](?=\W|$)/g, "$1$2");
 }
 
-/** Hides the term inside its own definition, so the question does not give the answer away. */
+/**
+ * Hides the term inside its own definition, so the question does not give the answer away. A short answer (three words
+ * or fewer) is a name, not a sentence: "Mexico City" stays as it is instead of turning into "___ City".
+ */
 export function mask(text: string, term: string): string {
     const plain = plainTerm(term);
-    if (plain.length < 3) return text;
+    if (plain.length < 3 || text.trim().split(/\s+/).length <= 3) return text;
     return text.replace(new RegExp(escapeRe(plain), "gi"), "___");
 }
 

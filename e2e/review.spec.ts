@@ -1,25 +1,29 @@
+import { readFileSync } from "node:fs";
 import type { App } from "obsidian";
 import { expect, test } from "./fixtures";
+import { demoHistory } from "./history";
 
 const card = ".flashy-card[data-depth='0']";
+const SPANISH = "Decks/Spanish - Kitchen.md";
+const CAPITALS = "Decks/Geography - Capitals.md";
 
 test("a scheduled round: deck screen, flip, swipes, undo, then the log and the deck numbers in the vault", async ({ obsidian, win }) => {
-    await obsidian.openFile("Decks/Agentic.md", { mode: "preview" });
+    await obsidian.openFile(SPANISH, { mode: "preview" });
     await obsidian.runCommand("flashidian:review-note");
 
-    // The deck screen: three new cards, all of them today's.
-    await expect(win.locator(".flashy-home-cell.is-today .flashy-home-n")).toHaveText("3");
-    await expect(win.locator(".flashy-home-cell.is-new .flashy-home-n")).toHaveText("3");
+    // The deck screen: ten new cards, all of them today's.
+    await expect(win.locator(".flashy-home-cell.is-today .flashy-home-n")).toHaveText("10");
+    await expect(win.locator(".flashy-home-cell.is-new .flashy-home-n")).toHaveText("10");
     await expect(win.locator(".flashy-home-cell.is-learned .flashy-home-n")).toHaveText("0");
-    await win.getByRole("button", { name: "Study 3" }).click();
+    await win.getByRole("button", { name: "Study 10" }).click();
 
-    await expect(win.locator(".flashy-count")).toHaveText("1 / 3");
-    await expect(win.locator(`${card} .flashy-term`)).toHaveText("Agentic Loop");
+    await expect(win.locator(".flashy-count")).toHaveText("1 / 10");
+    await expect(win.locator(`${card} .flashy-term`)).toHaveText("la cuchara");
 
     // A tap flips the card and shows the rendered back.
     await win.locator(card).click();
     await expect(win.locator(card)).toHaveClass(/is-flipped/);
-    await expect(win.locator(`${card} .flashy-scroll code`).first()).toHaveText("end_turn");
+    await expect(win.locator(`${card} .flashy-scroll em`).first()).toHaveText("Pásame la cuchara, por favor.");
 
     // A drag past the threshold to the right keeps the card.
     const box = await win.locator(card).boundingBox();
@@ -30,7 +34,7 @@ test("a scheduled round: deck screen, flip, swipes, undo, then the log and the d
     await win.mouse.move(cx + box.width * 0.6, cy + 10, { steps: 10 });
     await win.mouse.up();
     await expect(win.locator(".flashy-pill.is-keep .flashy-n")).toHaveText("1");
-    await expect(win.locator(".flashy-count")).toHaveText("2 / 3");
+    await expect(win.locator(".flashy-count")).toHaveText("2 / 10");
 
     // A short drag springs back and grades nothing.
     await win.mouse.move(cx, cy);
@@ -39,18 +43,21 @@ test("a scheduled round: deck screen, flip, swipes, undo, then the log and the d
     await win.waitForTimeout(150);
     await win.mouse.up();
     await win.waitForTimeout(400);
-    await expect(win.locator(".flashy-count")).toHaveText("2 / 3");
+    await expect(win.locator(".flashy-count")).toHaveText("2 / 10");
 
     // The buttons grade too, and undo takes the grade back.
     await win.getByRole("button", { name: "Again" }).click();
     await expect(win.locator(".flashy-pill.is-repeat .flashy-n")).toHaveText("1");
     await win.getByRole("button", { name: "Undo last card" }).click();
     await expect(win.locator(".flashy-pill.is-repeat .flashy-n")).toHaveText("0");
-    await expect(win.locator(`${card} .flashy-term`)).toHaveText("stop_reason");
+    await expect(win.locator(`${card} .flashy-term`)).toHaveText("el tenedor");
 
     await win.keyboard.press("ArrowLeft");
-    await expect(win.locator(".flashy-count")).toHaveText("3 / 3");
-    await win.keyboard.press("ArrowRight");
+    await expect(win.locator(".flashy-count")).toHaveText("3 / 10");
+    for (let i = 3; i <= 10; i++) {
+        await expect(win.locator(".flashy-count")).toHaveText(`${i} / 10`);
+        await win.keyboard.press("ArrowRight");
+    }
 
     // End of round: a practice round of the card sent left, then back to the deck, where nothing is left today.
     await expect(win.locator(".flashy-done")).toBeVisible();
@@ -59,28 +66,28 @@ test("a scheduled round: deck screen, flip, swipes, undo, then the log and the d
     await win.keyboard.press("ArrowRight");
     await win.getByRole("button", { name: "Back to the deck" }).click();
     await expect(win.locator(".flashy-home-cell.is-today .flashy-home-n")).toHaveText("0");
-    await expect(win.locator(".flashy-home-cell.is-learned .flashy-home-n")).toHaveText("2");
+    await expect(win.locator(".flashy-home-cell.is-learned .flashy-home-n")).toHaveText("9");
     await expect(win.getByRole("button", { name: "Done for today" })).toBeDisabled();
     await expect(win.locator(".flashy-home-note")).toContainText("Next cards on");
 
-    await expect(win.locator(".flashy-title")).toHaveText("Agentic");
+    await expect(win.locator(".flashy-title")).toHaveText("Spanish - Kitchen");
     await win.getByRole("button", { name: "Close" }).first().click();
     await expect(win.locator(".flashy-modal")).toHaveCount(0);
 
-    // The log holds three reviews (the practice round writes nothing, undo took one back); the deck note is untouched.
+    // The log holds ten reviews (the practice round writes nothing, undo took one back); the deck note is untouched.
     await expect
         .poll(() =>
             obsidian.evaluate(async (app: App) => {
                 const log = app.vault.getFiles().find((f) => f.path.startsWith("Flashy/log-"));
-                const summary = app.vault.getFileByPath("Flashy/Agentic.md");
+                const summary = app.vault.getFileByPath("Flashy/Spanish - Kitchen.md");
                 if (!log || !summary) return null;
                 const lines = (await app.vault.read(log)).split("\n").filter((l) => /^\d{4}-\d\d-\d\dT/.test(l));
                 const fm = app.metadataCache.getFileCache(summary)?.frontmatter ?? {};
                 return `${lines.length} ${lines.map((l) => l.split(" ")[2]).join("")} ${fm["flashy-total"]} ${fm["flashy-learned"]} ${fm["flashy-learning"]} ${fm["flashy-due"]}`;
             }),
         )
-        .toBe("3 313 3 2 1 0");
-    const deck = await obsidian.evaluate(async (app: App) => app.vault.read(app.vault.getFileByPath("Decks/Agentic.md")!));
+        .toBe("10 3133333333 10 9 1 0");
+    const deck = await obsidian.evaluate(async (app: App, path: string) => app.vault.read(app.vault.getFileByPath(path)!), SPANISH);
     expect(deck).not.toContain("flashy");
 });
 
@@ -92,13 +99,13 @@ test("says so when a note has no cards", async ({ obsidian, win }) => {
 
 test("fits the phone layout", async ({ obsidian, win }) => {
     await obsidian.mobile();
-    await obsidian.openFile("Decks/Agentic.md", { mode: "preview" });
+    await obsidian.openFile(SPANISH, { mode: "preview" });
     await obsidian.runCommand("flashidian:review-note");
     await obsidian.settle({ root: ".flashy-modal" });
     // Fails with a list of problems: overflow, touch targets under 44 px.
     await obsidian.checkLayout({ root: ".flashy-modal" });
     await win.screenshot({ path: ".e2e/phone-deck.png" });
-    await win.getByRole("button", { name: "Study 3" }).click();
+    await win.getByRole("button", { name: "Study 10" }).click();
     await obsidian.settle({ root: ".flashy-modal" });
     await obsidian.checkLayout({ root: ".flashy-modal" });
     await win.screenshot({ path: ".e2e/phone.png" });
@@ -111,22 +118,26 @@ test("a deck list in a note starts a review with one tap and redraws after it", 
     await obsidian.openFile("Study.md", { mode: "preview" });
     // Obsidian also renders the block in the hidden editor of the tab; the reading view is the one on screen.
     const rows = win.locator(".markdown-reading-view .flashy-deck-row");
-    await expect(rows).toHaveCount(3);
+    await expect(rows).toHaveCount(5);
     await expect(rows.nth(0).locator(".flashy-deck-name")).toHaveText("All decks");
-    await expect(rows.nth(0).locator(".flashy-deck-today-n")).toHaveText("4");
-    await expect(rows.nth(1).locator(".flashy-deck-name")).toHaveText("Agentic");
-    await expect(rows.nth(2).locator(".flashy-deck-meta")).toHaveText("0 of 1 learned, 1 new");
+    await expect(rows.nth(0).locator(".flashy-deck-today-n")).toHaveText("20");
+    await expect(rows.nth(1).locator(".flashy-deck-name")).toHaveText("Biology - The Cell");
+    await expect(rows.nth(2).locator(".flashy-deck-meta")).toHaveText("0 of 8 learned, 8 new");
 
     await rows.nth(2).click();
-    await expect(win.locator(".flashy-title")).toHaveText("Tools");
-    await win.getByRole("button", { name: "Study 1" }).click();
-    await win.keyboard.press("ArrowRight");
+    await expect(win.locator(".flashy-title")).toHaveText("Cooking - Techniques");
+    await win.getByRole("button", { name: "Study 8" }).click();
+    for (let i = 1; i <= 8; i++) {
+        await expect(win.locator(".flashy-count")).toHaveText(`${i} / 8`);
+        await win.keyboard.press("ArrowRight");
+    }
     await expect(win.locator(".flashy-done")).toBeVisible();
     await win.getByRole("button", { name: "Close" }).first().click();
 
-    await expect(rows.nth(2).locator(".flashy-deck-meta")).toHaveText("1 of 1 learned, 0 new");
+    await expect(rows.nth(2).locator(".flashy-deck-meta")).toHaveText("8 of 8 learned, 0 new");
     await expect(rows.nth(2).locator(".flashy-deck-today-n")).toHaveText("0");
-    await expect(rows.nth(0).locator(".flashy-deck-today-n")).toHaveText("3");
+    // Eight of today's twenty new cards are used up.
+    await expect(rows.nth(0).locator(".flashy-deck-today-n")).toHaveText("12");
 
     await obsidian.mobile();
     await obsidian.openFile("Study.md", { mode: "preview" });
@@ -144,10 +155,11 @@ test("the deck list names a missing folder", async ({ obsidian, win }) => {
 });
 
 test("a glossary with flashy: true is a deck of its headings", async ({ obsidian, win }) => {
-    await obsidian.openFile("Glossary/Terms.md", { mode: "preview" });
+    await obsidian.openFile("Decks/Biology - The Cell.md", { mode: "preview" });
     await obsidian.runCommand("flashidian:review-note");
-    await win.getByRole("button", { name: "Study 2" }).click();
-    await expect(win.locator(`${card} .flashy-term`)).toHaveText("Agentic Loop");
+    // Eight headings; the table and the list inside the answers are not cards of their own.
+    await win.getByRole("button", { name: "Study 8" }).click();
+    await expect(win.locator(`${card} .flashy-term`)).toHaveText("Nucleus");
     await win.locator(card).click();
     await expect(win.locator(`${card} .flashy-scroll .callout`)).toBeVisible();
 });
@@ -155,20 +167,23 @@ test("a glossary with flashy: true is a deck of its headings", async ({ obsidian
 test("pasted text from Quizlet becomes a deck note", async ({ obsidian, win }) => {
     await obsidian.openFile("Welcome.md", { mode: "preview" });
     await obsidian.runCommand("flashidian:paste-deck");
-    await win.locator(".flashy-paste-area").fill("Hook\truns code around a tool call\nSkill\ta packaged prompt");
-    await expect(win.locator(".flashy-paste-found")).toHaveText("Cards found: 2");
-    await win.locator(".flashy-paste-modal input[type=text]").fill("Pasted");
+    // A real Quizlet export: tab between term and definition, one card per line.
+    const tsv = readFileSync("e2e/data/music-tempo-quizlet.tsv", "utf8");
+    await win.locator(".flashy-paste-area").fill(tsv);
+    await expect(win.locator(".flashy-paste-found")).toHaveText("Cards found: 8");
+    await win.locator(".flashy-paste-modal input[type=text]").fill("Music - Tempo");
     await win.getByRole("button", { name: "Create deck" }).click();
+    const expected = tsv.trim().split("\n").map((l) => l.replace("\t", "\n?\n")).join("\n\n") + "\n";
     await expect
         .poll(() => obsidian.evaluate(async (app: App) => {
-            const f = app.vault.getFileByPath("Pasted.md");
+            const f = app.vault.getFileByPath("Music - Tempo.md");
             return f ? app.vault.read(f) : "";
         }))
-        .toBe("Hook\n?\nruns code around a tool call\n\nSkill\n?\na packaged prompt\n");
+        .toBe(expected);
 });
 
 test("undo after the reviews were written appends a cancelling line", async ({ obsidian, win }) => {
-    await obsidian.openFile("Decks/Tools.md", { mode: "preview" });
+    await obsidian.openFile("Edge cases/Single card.md", { mode: "preview" });
     await obsidian.runCommand("flashidian:review-note");
     await win.getByRole("button", { name: "Study 1" }).click();
     await win.keyboard.press("ArrowRight");
@@ -189,26 +204,29 @@ test("undo after the reviews were written appends a cancelling line", async ({ o
 });
 
 test("a quiz: pick the term for a definition, a right pick moves on, a wrong one waits, then retry the missed", async ({ obsidian, win }) => {
-    await obsidian.openFile("Study.md", { mode: "preview" });
-    await win.locator(".markdown-reading-view .flashy-deck-row").first().click();
-    await win.getByRole("button", { name: "Quiz: 4 questions" }).click();
+    await obsidian.openFile("Decks/Cooking - Techniques.md", { mode: "preview" });
+    await obsidian.runCommand("flashidian:review-note");
+    await win.getByRole("button", { name: "Quiz: 8 questions" }).click();
 
     const answers: [string, string][] = [
-        ["A control flow", "Agentic Loop"],
-        ["Why the model stopped", "stop_reason"],
-        ["A separate Claude instance", "Subagent"],
-        ["Forces, allows or forbids", "tool_choice"],
+        ["small pieces quickly", "Sauté"],
+        ["brown meat first", "Braise"],
+        ["boiling water for a minute", "Blanch"],
+        ["thin matchsticks", "Julienne"],
+        ["browned bits", "Deglaze"],
+        ["oil and vinegar", "Emulsify"],
+        ["keeps its air", "Fold"],
+        ["yeast dough", "Proof"],
     ];
-    const termFor = async (): Promise<string> => {
+    for (let i = 0; i < 8; i++) {
+        await expect(win.locator(".flashy-count")).toHaveText(`${i + 1} / 8`);
         const prompt = (await win.locator(".flashy-quiz-text").textContent()) ?? "";
         const hit = answers.find(([p]) => prompt.includes(p));
         if (!hit) throw new Error(`unknown prompt: ${prompt}`);
-        return hit[1];
-    };
-
-    for (let i = 0; i < 4; i++) {
-        await expect(win.locator(".flashy-count")).toHaveText(`${i + 1} / 4`);
-        const term = await termFor();
+        const term = hit[1];
+        // The definition names its own term; the question hides it.
+        expect(prompt.toLowerCase()).not.toContain(term.toLowerCase());
+        expect(prompt).toContain("___");
         const options = win.locator(".flashy-quiz-option");
         if (i === 1) {
             // A wrong pick: red on the pick, green on the answer, and the round waits for Next.
@@ -222,8 +240,8 @@ test("a quiz: pick the term for a definition, a right pick moves on, a wrong one
         }
     }
 
-    await expect(win.locator(".flashy-done h2")).toHaveText("3 of 4 right");
-    await expect(win.locator(".flashy-pill.is-keep .flashy-n")).toHaveText("3");
+    await expect(win.locator(".flashy-done h2")).toHaveText("7 of 8 right");
+    await expect(win.locator(".flashy-pill.is-keep .flashy-n")).toHaveText("7");
     await win.getByRole("button", { name: "Retry the 1 missed" }).click();
     await expect(win.locator(".flashy-count")).toHaveText("1 / 1");
 
@@ -233,44 +251,43 @@ test("a quiz: pick the term for a definition, a right pick moves on, a wrong one
 });
 
 test("a reverse quiz: pick the definition for a term, then retry the missed in the same direction", async ({ obsidian, win }) => {
-    await obsidian.openFile("Study.md", { mode: "preview" });
-    await win.locator(".markdown-reading-view .flashy-deck-row").first().click();
-    await win.getByRole("button", { name: "Reverse quiz: 4 terms" }).click();
+    await obsidian.openFile(CAPITALS, { mode: "preview" });
+    await obsidian.runCommand("flashidian:review-note");
+    await win.getByRole("button", { name: "Reverse quiz: 10 terms" }).click();
     await expect(win.locator(".flashy-quiz.is-reverse .flashy-deck")).toContainText("which definition fits?");
 
-    const answers: [string, string][] = [
-        ["Agentic Loop", "A control flow"],
-        ["stop_reason", "Why the model stopped"],
-        ["Subagent", "A separate Claude instance"],
-        ["tool_choice", "Forces, allows or forbids"],
-    ];
-    for (let i = 0; i < 4; i++) {
-        await expect(win.locator(".flashy-count")).toHaveText(`${i + 1} / 4`);
-        const term = (await win.locator(".flashy-quiz-text").textContent())?.trim() ?? "";
-        const hit = answers.find(([t]) => t === term);
-        if (!hit) throw new Error(`unknown term: ${term}`);
+    // A table deck: the country is the front, the capital the first line of the back. A short answer is not masked, so
+    // "Mexico City" stays whole.
+    const capitals: Record<string, string> = {
+        France: "Paris", Japan: "Tokyo", Brazil: "Brasília", Australia: "Canberra", Canada: "Ottawa",
+        Egypt: "Cairo", Kenya: "Nairobi", Italy: "Rome", Mexico: "Mexico City", Turkey: "Ankara",
+    };
+    for (let i = 0; i < 10; i++) {
+        await expect(win.locator(".flashy-count")).toHaveText(`${i + 1} / 10`);
+        const country = (await win.locator(".flashy-quiz-text").textContent())?.trim() ?? "";
+        const capital = capitals[country];
+        if (!capital) throw new Error(`unknown country: ${country}`);
         const options = win.locator(".flashy-quiz-option");
-        // No option gives its own term away.
-        for (const [t] of answers) await expect(options.filter({ hasText: t })).toHaveCount(0);
+        await expect(options).toHaveCount(4);
         if (i === 0) {
-            await options.filter({ hasNotText: hit[1] }).first().click();
-            await expect(win.locator(".flashy-quiz-option.is-right")).toContainText(hit[1]);
+            await options.filter({ hasNotText: capital }).first().click();
+            await expect(win.locator(".flashy-quiz-option.is-right")).toContainText(capital);
             await win.getByRole("button", { name: "Next" }).click();
         } else {
-            await options.filter({ hasText: hit[1] }).click();
+            await options.filter({ hasText: capital }).click();
             await expect(win.locator(".flashy-quiz-option.is-right")).toHaveCount(1);
         }
     }
-    await expect(win.locator(".flashy-done h2")).toHaveText("3 of 4 right");
+    await expect(win.locator(".flashy-done h2")).toHaveText("9 of 10 right");
     await win.getByRole("button", { name: "Retry the 1 missed" }).click();
     await expect(win.locator(".flashy-quiz.is-reverse")).toHaveCount(1);
 });
 
 test("the reverse quiz fits the phone", async ({ obsidian, win }) => {
     await obsidian.mobile();
-    await obsidian.openFile("Study.md", { mode: "preview" });
-    await win.locator(".markdown-reading-view .flashy-deck-row").first().click();
-    await win.getByRole("button", { name: "Reverse quiz: 4 terms" }).click();
+    await obsidian.openFile(CAPITALS, { mode: "preview" });
+    await obsidian.runCommand("flashidian:review-note");
+    await win.getByRole("button", { name: "Reverse quiz: 10 terms" }).click();
     await obsidian.settle({ root: ".flashy-modal" });
     await obsidian.checkLayout({ root: ".flashy-modal" });
     await win.locator(".flashy-quiz-option").first().click();
@@ -280,12 +297,28 @@ test("the reverse quiz fits the phone", async ({ obsidian, win }) => {
 
 test("the quiz fits the phone", async ({ obsidian, win }) => {
     await obsidian.mobile();
-    await obsidian.openFile("Study.md", { mode: "preview" });
-    await win.locator(".markdown-reading-view .flashy-deck-row").first().click();
-    await win.getByRole("button", { name: "Quiz: 4 questions" }).click();
+    await obsidian.openFile("Decks/Cooking - Techniques.md", { mode: "preview" });
+    await obsidian.runCommand("flashidian:review-note");
+    await win.getByRole("button", { name: "Quiz: 8 questions" }).click();
     await obsidian.settle({ root: ".flashy-modal" });
     await obsidian.checkLayout({ root: ".flashy-modal" });
     await win.locator(".flashy-quiz-option").first().click();
     await win.waitForTimeout(450);
     await win.screenshot({ path: ".e2e/phone-quiz.png" });
+});
+
+test.describe("a vault in use", () => {
+    test.use({ seed: { files: { "Flashy/log-demo.md": demoHistory(new Date()) } } });
+
+    test("the seeded history shows learned, due and new cards in every deck", async ({ obsidian, win }) => {
+        await obsidian.openFile("Study.md", { mode: "preview" });
+        const rows = win.locator(".markdown-reading-view .flashy-deck-row");
+        await expect(rows).toHaveCount(5);
+        // Spanish: cards 1 and 6 new, 2 and 7 missed yesterday, the other six learned.
+        await expect(rows.nth(4).locator(".flashy-deck-meta")).toHaveText("6 of 10 learned, 2 new");
+        await rows.nth(4).click();
+        await expect(win.locator(".flashy-home-cell.is-new .flashy-home-n")).toHaveText("2");
+        await expect(win.locator(".flashy-home-cell.is-learned .flashy-home-n")).toHaveText("6");
+        expect(Number(await win.locator(".flashy-home-cell.is-today .flashy-home-n").textContent())).toBeGreaterThanOrEqual(4);
+    });
 });

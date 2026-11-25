@@ -54,6 +54,15 @@ Decided after an architect and a marketer reviewed the options: notes with cards
 - Quiz terms go through `plainTerm`: strip bold and code marks only. Stripping every `_` turned `stop_reason` into `stopreason` (caught by e2e).
 - No regex lookbehind anywhere: iOS before 16.4 cannot parse it, and `obsidianmd/regex-lookbehind` fails the lint.
 
+- The quiz hides a card's term in its own answer only when the answer is a sentence (more than three words): a short answer is a name, and "Mexico City" masked as "___ City" read as a bug.
+
+## Seed vault: the base of tests and demos
+
+`e2e-vault.pristine/` holds decks anyone recognises, in English, one card format per topic: `Decks/Spanish - Kitchen` (`?` cards), `Biology - The Cell` (headings, `flashy: true`, with a callout, a list and a table inside answers), `Geography - Capitals` (table), `Cooking - Techniques` (list). `e2e/data/music-tempo-quizlet.tsv` is a Quizlet export for the paste flow. Parser traps (code, SR comments, repeated fronts, shared answers, a long answer) live in `Edge cases/`, out of the demo decks. No AI or IT terms in the demo decks, and never notes from Dmitriy's vault.
+
+- `src/core/seed.test.ts` keeps it usable: card counts, unique keys, four options per question in both quiz directions, no term leaking into a sentence. Change a deck, update the counts there and in `e2e/review.spec.ts`.
+- `e2e/history.ts` `demoHistory(now)` writes a review log dated back from `now` (per five cards: one new, one missed yesterday, three learned). Seed it with `test.use({ seed: { files: { "Flashy/log-demo.md": demoHistory(new Date()) } } })` for a deck in use; a film pairs it with `demo.freezeTime`.
+
 ## Not built yet
 
-Replay cache and log snapshots (logs are replayed in full on every open; fine for thousands of reviews), cards from tables, lists and headings, paste import, multiple choice. Testing on a phone goes through BRAT (`Dimagious/flashidian`), so every fix the phone should see needs `opdk release patch`.
+Replay cache and log snapshots (logs are replayed in full on every open; fine for thousands of reviews). Testing on a phone goes through BRAT (`Dimagious/flashidian`), so every fix the phone should see needs `opdk release patch`.

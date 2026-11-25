@@ -42,9 +42,14 @@ describe("gist", () => {
 describe("mask", () => {
     it("hides the term in its definition, ignoring case and markdown", () => {
         expect(mask("The Agent SDK runs agents. agent sdk again.", "**Agent SDK**")).toBe("The ___ runs agents. ___ again.");
-        expect(mask("a.b c", "a.b")).toBe("___ c");
-        expect(mask("an ok text", "ok")).toBe("an ok text");
-        expect(mask("A stop_reason value.", "**stop_reason**")).toBe("A ___ value.");
+        expect(mask("a.b c d e", "a.b")).toBe("___ c d e");
+        expect(mask("an ok text here", "ok")).toBe("an ok text here");
+        expect(mask("A stop_reason value here.", "**stop_reason**")).toBe("A ___ value here.");
+    });
+
+    it("leaves a short answer alone: a name, not a sentence", () => {
+        expect(mask("Mexico City", "Mexico")).toBe("Mexico City");
+        expect(mask("The Agent SDK", "Agent SDK")).toBe("The Agent SDK");
     });
 });
 

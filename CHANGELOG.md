@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- The quiz no longer masks a short answer: "Mexico City" for Mexico stays whole instead of showing "___ City". Terms are still hidden inside definitions.
+
 ## [0.6.0] - 2026-11-25
 
 ### Added
